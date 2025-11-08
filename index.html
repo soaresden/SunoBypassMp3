@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suno Tempo Boost</title>
+    <title>Suno Tempo Boost - Batch</title>
     <style>
         * {
             margin: 0;
@@ -75,11 +75,13 @@
             border-radius: 20px;
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3), 0 0 40px rgba(255, 107, 53, 0.1);
             padding: 30px 25px;
-            max-width: 480px;
+            max-width: 520px;
             width: 100%;
             animation: slideIn 0.5s ease-out;
             position: relative;
             z-index: 10;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         @keyframes slideIn {
@@ -158,19 +160,30 @@
             transform: translateY(-1px);
         }
 
-        .file-info {
-            margin: 10px 0;
-            padding: 10px;
+        .file-list {
+            margin: 12px 0;
+            padding: 12px;
             background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
             border-left: 4px solid #FF6B35;
             border-radius: 8px;
             font-size: 12px;
             display: none;
-            animation: slideIn 0.3s ease-out;
+            max-height: 100px;
+            overflow-y: auto;
         }
 
-        .file-info.show {
+        .file-list.show {
             display: block;
+        }
+
+        .file-item {
+            padding: 4px 0;
+            color: #555;
+            border-bottom: 1px solid #FFE0CC;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
         }
 
         .tempo-control {
@@ -325,44 +338,10 @@
             box-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
         }
 
-        .steps {
+        .file-progress {
             font-size: 11px;
-            color: #666;
-        }
-
-        .step {
-            padding: 6px 0;
-            display: flex;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-
-        .step-dot {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #FFE0CC;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 8px;
-            font-size: 9px;
-            color: #FF6B35;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-
-        .step.active .step-dot {
-            background: #FF6B35;
-            color: white;
-            animation: pulse 1.5s infinite;
-            box-shadow: 0 0 12px rgba(255, 107, 53, 0.5);
-        }
-
-        .step.done .step-dot {
-            background: #FF9F1C;
-            color: white;
-            transform: scale(1.1);
+            color: #555;
+            margin-bottom: 8px;
         }
 
         .result {
@@ -381,30 +360,91 @@
 
         .result h3 {
             color: #FF6B35;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             font-size: 15px;
             letter-spacing: 0.3px;
         }
 
-        .result p {
-            color: #555;
-            font-size: 12px;
+        .results-list {
+            max-height: 300px;
+            overflow-y: auto;
             margin-bottom: 12px;
-            line-height: 1.5;
+        }
+
+        .result-item {
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #FF6B35;
+            font-size: 11px;
+        }
+
+        .result-item-name {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 4px;
             word-break: break-all;
         }
 
-        .download-btn {
+        .result-item-info {
+            color: #666;
+            font-size: 10px;
+        }
+
+        .result-item-btn {
+            margin-top: 6px;
+        }
+
+        .download-individual {
+            width: 100%;
+            padding: 8px;
+            background: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .download-individual:hover {
+            background: #FF9F1C;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .button-group button {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .download-zip {
             background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
-            margin-bottom: 8px;
+            color: white;
+        }
+
+        .download-zip:hover {
+            box-shadow: 0 8px 16px rgba(255, 107, 53, 0.3);
         }
 
         .reset-btn {
             background: #999;
+            color: white;
         }
 
         .reset-btn:hover {
-            box-shadow: 0 8px 16px rgba(150, 150, 150, 0.2);
+            background: #777;
         }
 
         .error {
@@ -421,18 +461,6 @@
 
         .error.show {
             display: block;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .button-group button {
-            flex: 1;
-            padding: 10px;
-            font-size: 14px;
         }
 
         /* Mobile responsive */
@@ -452,12 +480,6 @@
                 margin-bottom: 12px;
             }
 
-            .badge {
-                padding: 5px 12px;
-                font-size: 10px;
-                margin-bottom: 12px;
-            }
-
             input[type="file"] {
                 padding: 10px;
                 margin-bottom: 10px;
@@ -467,11 +489,6 @@
             .tempo-control {
                 margin: 12px 0;
                 padding: 14px;
-            }
-
-            .tempo-label {
-                font-size: 13px;
-                margin-bottom: 10px;
             }
 
             .tempo-btn {
@@ -488,21 +505,6 @@
             .process-btn {
                 padding: 10px;
                 font-size: 14px;
-                margin-bottom: 10px;
-            }
-
-            .result {
-                margin-top: 12px;
-                padding: 12px;
-            }
-
-            .result h3 {
-                font-size: 14px;
-                margin-bottom: 6px;
-            }
-
-            .result p {
-                font-size: 11px;
                 margin-bottom: 10px;
             }
 
@@ -538,12 +540,12 @@
 
     <div class="container">
         <h1>🎵 Tempo Boost</h1>
-        <p class="subtitle">Speed up your music • Keep vocal quality</p>
+        <p class="subtitle">Batch process your music • Speed up multiple files</p>
         
         <div class="badge">✨ Local Processing • No Upload</div>
         
-        <input type="file" id="file" accept=".mp3" required>
-        <div class="file-info" id="fileInfo"></div>
+        <input type="file" id="file" accept=".mp3" multiple required>
+        <div class="file-list" id="fileList"></div>
 
         <div class="tempo-control">
             <label class="tempo-label">⚙️ Playback Speed:</label>
@@ -555,7 +557,7 @@
             <div class="tempo-range">0.5x to 4.0x</div>
         </div>
 
-        <button class="process-btn" id="processBtn">🚀 Process Audio</button>
+        <button class="process-btn" id="processBtn">🚀 Process All Files</button>
 
         <div class="progress-container" id="progress">
             <div class="progress-header">
@@ -565,19 +567,15 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="fill"></div>
             </div>
-            <div class="steps">
-                <div class="step active" id="s1"><div class="step-dot">1</div> Decoding MP3</div>
-                <div class="step" id="s2"><div class="step-dot">2</div> Time-stretching</div>
-                <div class="step" id="s3"><div class="step-dot">3</div> Encoding MP3 320kbps</div>
-            </div>
+            <div class="file-progress" id="fileProgress">File 1 of 1</div>
         </div>
 
         <div class="result" id="result">
-            <h3>✅ Ready to Download!</h3>
-            <p id="info"></p>
+            <h3>✅ All files processed!</h3>
+            <div class="results-list" id="resultsList"></div>
             <div class="button-group">
-                <button class="download-btn" id="dlBtn">⬇️ Download</button>
-                <button class="reset-btn" onclick="location.reload()">🔄 New</button>
+                <button class="download-zip" id="downloadZipBtn">📦 Download ZIP</button>
+                <button class="reset-btn" onclick="location.reload()">🔄 New Batch</button>
             </div>
         </div>
 
@@ -585,12 +583,12 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        let selectedFile = null;
-        let outputBlob = null;
+        let selectedFiles = [];
+        let processedFiles = [];
         let tempoValue = 2.0;
-        let originalDuration = 0;
 
         function formatDuration(seconds) {
             const hours = Math.floor(seconds / 3600);
@@ -629,61 +627,86 @@
         });
 
         document.getElementById('file').addEventListener('change', (e) => {
-            selectedFile = e.target.files[0];
-            if (selectedFile) {
-                const mb = (selectedFile.size / 1024 / 1024).toFixed(2);
-                document.getElementById('fileInfo').innerHTML = `📊 ${selectedFile.name} (${mb} MB)`;
-                document.getElementById('fileInfo').classList.add('show');
+            selectedFiles = Array.from(e.target.files);
+            const fileList = document.getElementById('fileList');
+            
+            if (selectedFiles.length > 0) {
+                let html = `<strong>${selectedFiles.length} file(s) selected:</strong><br>`;
+                selectedFiles.forEach(f => {
+                    const mb = (f.size / 1024 / 1024).toFixed(2);
+                    html += `<div class="file-item">📄 ${f.name} (${mb} MB)</div>`;
+                });
+                fileList.innerHTML = html;
+                fileList.classList.add('show');
+            } else {
+                fileList.classList.remove('show');
             }
         });
 
         document.getElementById('processBtn').addEventListener('click', async () => {
-            if (!selectedFile) {
-                showError('Please select an MP3 file');
+            if (selectedFiles.length === 0) {
+                showError('Please select MP3 files');
                 return;
             }
 
             const tempo = tempoValue;
+            processedFiles = [];
 
             try {
                 document.getElementById('error').classList.remove('show');
                 document.getElementById('result').classList.remove('show');
                 document.getElementById('progress').classList.add('show');
                 document.getElementById('processBtn').disabled = true;
+                document.getElementById('file').disabled = true;
 
-                // Step 1: Decode
-                setProgress(20, 'Decoding MP3...', 1);
-                const arrayBuffer = await selectedFile.arrayBuffer();
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                originalDuration = audioBuffer.duration;
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    const fileNum = i + 1;
+                    const totalFiles = selectedFiles.length;
 
-                // Step 2: Time-stretching
-                setProgress(50, `Time-stretching ${tempo}x...`, 2);
-                const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, tempo);
+                    try {
+                        document.getElementById('fileProgress').textContent = `Processing: ${file.name} (${fileNum}/${totalFiles})`;
+                        setProgress((i / totalFiles) * 100, `Decoding ${file.name}...`);
 
-                // Step 3: Encode
-                setProgress(70, 'Encoding MP3 320kbps...', 3);
-                outputBlob = await encodeToMP3(stretchedBuffer);
+                        const arrayBuffer = await file.arrayBuffer();
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        const originalDuration = audioBuffer.duration;
 
-                setProgress(100, 'Complete! ✅', 3);
+                        setProgress((i + 0.3) / totalFiles * 100, `Time-stretching ${file.name}...`);
+                        const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, tempo);
 
-                // Show result
+                        setProgress((i + 0.7) / totalFiles * 100, `Encoding MP3 320kbps...`);
+                        const blob = await encodeToMP3(stretchedBuffer);
+
+                        const durationStr = formatDuration(originalDuration);
+                        const outputName = file.name.replace('.mp3', `_${durationStr}_x${tempo}.mp3`);
+                        const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+
+                        processedFiles.push({
+                            name: outputName,
+                            blob: blob,
+                            originalDuration: originalDuration,
+                            newDuration: stretchedBuffer.duration,
+                            sizeMB: sizeMB,
+                            tempo: tempo
+                        });
+
+                        setProgress(((i + 1) / totalFiles) * 100, `Complete!`);
+
+                    } catch (error) {
+                        console.error(`Error processing ${file.name}:`, error);
+                        processedFiles.push({
+                            name: file.name,
+                            error: error.message,
+                            blob: null
+                        });
+                    }
+                }
+
+                setProgress(100, 'All files processed! ✅');
+
                 setTimeout(() => {
-                    const durationStr = formatDuration(originalDuration);
-                    const outputName = selectedFile.name.replace('.mp3', `_${durationStr}_x${tempo}.mp3`);
-                    const sizeMB = (outputBlob.size / 1024 / 1024).toFixed(2);
-                    const newDuration = stretchedBuffer.duration;
-                    
-                    document.getElementById('info').innerHTML = `
-                        <strong>${outputName}</strong><br>
-                        ⏱️ ${originalDuration.toFixed(1)}s → ${newDuration.toFixed(1)}s (${tempo}x)<br>
-                        💾 ${sizeMB} MB (320kbps)<br>
-                        ✓ Ready for Suno
-                    `;
-                    document.getElementById('progress').classList.remove('show');
-                    document.getElementById('result').classList.add('show');
-                    
-                    document.getElementById('dlBtn').onclick = () => downloadFile(outputBlob, outputName);
+                    displayResults();
                 }, 500);
 
             } catch (error) {
@@ -691,6 +714,83 @@
                 showError('Error: ' + error.message);
                 document.getElementById('progress').classList.remove('show');
                 document.getElementById('processBtn').disabled = false;
+                document.getElementById('file').disabled = false;
+            }
+        });
+
+        function displayResults() {
+            const resultsList = document.getElementById('resultsList');
+            let html = '';
+
+            processedFiles.forEach((file, idx) => {
+                if (file.error) {
+                    html += `
+                        <div class="result-item" style="border-left-color: #FF3333;">
+                            <div class="result-item-name">❌ ${file.name}</div>
+                            <div class="result-item-info">Error: ${file.error}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="result-item">
+                            <div class="result-item-name">✅ ${file.name}</div>
+                            <div class="result-item-info">
+                                ⏱️ ${file.originalDuration.toFixed(1)}s → ${file.newDuration.toFixed(1)}s (${file.tempo}x)<br>
+                                💾 ${file.sizeMB} MB
+                            </div>
+                            <div class="result-item-btn">
+                                <button class="download-individual" onclick="downloadFile(${idx})">⬇️ Download</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            resultsList.innerHTML = html;
+            document.getElementById('progress').classList.remove('show');
+            document.getElementById('result').classList.add('show');
+        }
+
+        window.downloadFile = function(idx) {
+            const file = processedFiles[idx];
+            if (file.blob) {
+                const url = URL.createObjectURL(file.blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        };
+
+        document.getElementById('downloadZipBtn').addEventListener('click', async () => {
+            const zip = new JSZip();
+            
+            processedFiles.forEach((file, idx) => {
+                if (file.blob) {
+                    zip.file(file.name, file.blob);
+                }
+            });
+
+            try {
+                document.getElementById('downloadZipBtn').disabled = true;
+                document.getElementById('downloadZipBtn').textContent = '📦 Creating ZIP...';
+                
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(zipBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `suno_tempo_boost_${Date.now()}.zip`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                document.getElementById('downloadZipBtn').textContent = '📦 Download ZIP';
+                document.getElementById('downloadZipBtn').disabled = false;
+            } catch (error) {
+                console.error('ZIP creation error:', error);
+                showError('Error creating ZIP: ' + error.message);
+                document.getElementById('downloadZipBtn').textContent = '📦 Download ZIP';
+                document.getElementById('downloadZipBtn').disabled = false;
             }
         });
 
@@ -786,19 +886,10 @@
             return int16Array;
         }
 
-        function setProgress(percent, status, step) {
+        function setProgress(percent, status) {
             document.getElementById('fill').style.width = percent + '%';
-            document.getElementById('percent').textContent = percent + '%';
+            document.getElementById('percent').textContent = Math.round(percent) + '%';
             document.getElementById('status').textContent = status;
-            
-            if (step) {
-                for (let i = 1; i < step; i++) {
-                    document.getElementById('s' + i).classList.remove('active');
-                    document.getElementById('s' + i).classList.add('done');
-                }
-                document.getElementById('s' + step).classList.add('active');
-                document.getElementById('s' + step).classList.remove('done');
-            }
         }
 
         function showError(msg) {
@@ -806,15 +897,7 @@
             err.innerHTML = '❌ ' + msg;
             err.classList.add('show');
             document.getElementById('processBtn').disabled = false;
-        }
-
-        function downloadFile(blob, filename) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
+            document.getElementById('file').disabled = false;
         }
     </script>
 </body>

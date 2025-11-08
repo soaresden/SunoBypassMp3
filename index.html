@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double Tempo MP3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            background: #f8f9ff;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .progress-status {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .progress-percentage {
+            color: #999;
+            font-weight: 600;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.2s;
+            border-radius: 10px;
+        }
+
+        .steps {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .step {
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-size: 10px;
+            color: #999;
+            font-weight: bold;
+        }
+
+        .step.active .step-dot {
+            background: #667eea;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+
+        .step.done .step-dot {
+            background: #4caf50;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        .result {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result h3 {
+            color: #2e7d32;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .result p {
+            color: #558b2f;
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            margin-bottom: 10px;
+        }
+
+        .reset-btn {
+            background: #999;
+        }
+
+        .file-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f0ff;
+            border-radius: 6px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .error {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            border-radius: 8px;
+            padding: 12px;
+            color: #c62828;
+            margin-top: 20px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Double Tempo</h1>
+        <p class="subtitle">Accélère tes MP3 pour Suno (voix normale)</p>
+        
+        <input type="file" id="file" accept=".mp3" required>
+        <div class="file-info" id="fileInfo"></div>
+
+        <button id="processBtn">🚀 Double le tempo</button>
+
+        <div class="progress-container" id="progress">
+            <div class="progress-header">
+                <div class="progress-status" id="status">Préparation...</div>
+                <div class="progress-percentage" id="percent">0%</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="fill"></div>
+            </div>
+            <div class="steps">
+                <div class="step active" id="s1"><div class="step-dot">1</div> Décodage MP3</div>
+                <div class="step" id="s2"><div class="step-dot">2</div> Time-stretching x2</div>
+                <div class="step" id="s3"><div class="step-dot">3</div> Encodage MP3 320kbps</div>
+            </div>
+        </div>
+
+        <div class="result" id="result">
+            <h3>✅ Fichier prêt!</h3>
+            <p id="info"></p>
+            <div class="button-group">
+                <button class="download-btn" id="dlBtn">⬇️ Télécharger</button>
+                <button class="reset-btn" onclick="location.reload()">🔄 Recommencer</button>
+            </div>
+        </div>
+
+        <div class="error" id="error"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <script>
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let selectedFile = null;
+        let outputBlob = null;
+
+        document.getElementById('file').addEventListener('change', (e) => {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                const mb = (selectedFile.size / 1024 / 1024).toFixed(2);
+                document.getElementById('fileInfo').innerHTML = `📊 ${selectedFile.name} (${mb} MB)`;
+                document.getElementById('fileInfo').classList.add('show');
+            }
+        });
+
+        document.getElementById('processBtn').addEventListener('click', async () => {
+            if (!selectedFile) {
+                showError('Sélectionne un fichier MP3');
+                return;
+            }
+
+            try {
+                document.getElementById('error').classList.remove('show');
+                document.getElementById('result').classList.remove('show');
+                document.getElementById('progress').classList.add('show');
+                document.getElementById('processBtn').disabled = true;
+
+                // Étape 1: Décodage
+                setProgress(20, 'Décodage du MP3...', 1);
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                // Étape 2: Time-stretching
+                setProgress(50, 'Time-stretching x2...', 2);
+                const stretchedBuffer = timeStretch(audioBuffer, 2.0);
+
+                // Étape 3: Encodage MP3
+                setProgress(70, 'Encodage MP3 320kbps...', 3);
+                outputBlob = await encodeToMP3(stretchedBuffer);
+
+                setProgress(100, 'Terminé! ✅', 3);
+
+                // Afficher le résultat
+                setTimeout(() => {
+                    const outputName = selectedFile.name.replace('.mp3', '_x2tempo.mp3');
+                    const sizeMB = (outputBlob.size / 1024 / 1024).toFixed(2);
+                    
+                    document.getElementById('info').innerHTML = `
+                        <strong>${outputName}</strong><br>
+                        💾 ${sizeMB} MB (320kbps)<br>
+                        ✓ Prêt pour Suno
+                    `;
+                    document.getElementById('progress').classList.remove('show');
+                    document.getElementById('result').classList.add('show');
+                    
+                    document.getElementById('dlBtn').onclick = () => downloadFile(outputBlob, outputName);
+                }, 500);
+
+            } catch (error) {
+                console.error(error);
+                showError('Erreur: ' + error.message);
+                document.getElementById('progress').classList.remove('show');
+                document.getElementById('processBtn').disabled = false;
+            }
+        });
+
+        function timeStretch(audioBuffer, tempo) {
+            // Créer un nouveau buffer pour le résultat
+            const originalLength = audioBuffer.length;
+            const newLength = Math.floor(originalLength / tempo);
+            const numberOfChannels = audioBuffer.numberOfChannels;
+            const sampleRate = audioBuffer.sampleRate;
+
+            const stretchedBuffer = audioContext.createBuffer(
+                numberOfChannels,
+                newLength,
+                sampleRate
+            );
+
+            // Pour chaque canal
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const inputData = audioBuffer.getChannelData(channel);
+                const outputData = stretchedBuffer.getChannelData(channel);
+
+                // Interpolation linéaire simple
+                for (let i = 0; i < newLength; i++) {
+                    const sourceIndex = (i / newLength) * originalLength;
+                    const sourceFloor = Math.floor(sourceIndex);
+                    const sourceCeil = Math.min(sourceFloor + 1, originalLength - 1);
+                    const fraction = sourceIndex - sourceFloor;
+
+                    const sample1 = inputData[sourceFloor];
+                    const sample2 = inputData[sourceCeil];
+                    outputData[i] = sample1 * (1 - fraction) + sample2 * fraction;
+                }
+            }
+
+            return stretchedBuffer;
+        }
+
+        async function encodeToMP3(audioBuffer) {
+            const numberOfChannels = audioBuffer.numberOfChannels;
+            const sampleRate = audioBuffer.sampleRate;
+
+            // Initialiser lamejs
+            const encoder = new lamejs.Mp3Encoder(numberOfChannels, sampleRate, 320);
+            const mp3Data = [];
+
+            // Récupérer les données audio
+            const channels = [];
+            for (let i = 0; i < numberOfChannels; i++) {
+                channels.push(audioBuffer.getChannelData(i));
+            }
+
+            // Encoder par chunks
+            const chunkSize = 1152; // Taille standard d'une frame MP3
+            const totalSamples = audioBuffer.length;
+
+            for (let i = 0; i < totalSamples; i += chunkSize) {
+                const remainingSamples = Math.min(chunkSize, totalSamples - i);
+                
+                // Récupérer le chunk
+                const leftChunk = channels[0].slice(i, i + remainingSamples);
+                const rightChunk = numberOfChannels > 1 ? channels[1].slice(i, i + remainingSamples) : null;
+
+                // Convertir Float32 en Int16
+                const left = floatTo16BitPCM(leftChunk);
+                const right = numberOfChannels > 1 ? floatTo16BitPCM(rightChunk) : null;
+
+                // Encoder
+                const encoded = numberOfChannels === 1 
+                    ? encoder.encodeBuffer(left)
+                    : encoder.encodeBuffer(left, right);
+
+                if (encoded.length > 0) {
+                    mp3Data.push(new Uint8Array(encoded));
+                }
+            }
+
+            // Finaliser
+            const final = encoder.flush();
+            if (final.length > 0) {
+                mp3Data.push(new Uint8Array(final));
+            }
+
+            // Combiner les chunks
+            const totalLength = mp3Data.reduce((acc, chunk) => acc + chunk.length, 0);
+            const mp3Buffer = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of mp3Data) {
+                mp3Buffer.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            return new Blob([mp3Buffer], { type: 'audio/mpeg' });
+        }
+
+        function floatTo16BitPCM(floatArray) {
+            const int16Array = new Int16Array(floatArray.length);
+            for (let i = 0; i < floatArray.length; i++) {
+                let sample = Math.max(-1, Math.min(1, floatArray[i]));
+                int16Array[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+            }
+            return int16Array;
+        }
+
+        function setProgress(percent, status, step) {
+            document.getElementById('fill').style.width = percent + '%';
+            document.getElementById('percent').textContent = percent + '%';
+            document.getElementById('status').textContent = status;
+            
+            if (step) {
+                for (let i = 1; i < step; i++) {
+                    document.getElementById('s' + i).classList.remove('active');
+                    document.getElementById('s' + i).classList.add('done');
+                }
+                document.getElementById('s' + step).classList.add('active');
+                document.getElementById('s' + step).classList.remove('done');
+            }
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('error');
+            err.innerHTML = '❌ ' + msg;
+            err.classList.add('show');
+            document.getElementById('processBtn').disabled = false;
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

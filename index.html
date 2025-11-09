@@ -638,96 +638,46 @@
             updateFileList();
         });
 
-        // Drag & drop functionality - écuter partout
+        // Drag & drop functionality
         const container = document.querySelector('.container');
-        
-        console.log('🎯 Setup drag & drop...');
         
         function setupDragDrop(target) {
             target.addEventListener('dragover', (e) => {
-                console.log('🔄 dragover sur', target.tagName);
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.add('drag-active');
             });
 
             target.addEventListener('dragenter', (e) => {
-                console.log('➡️  dragenter sur', target.tagName);
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.add('drag-active');
             });
 
             target.addEventListener('dragleave', (e) => {
-                console.log('⬅️  dragleave sur', target.tagName);
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.remove('drag-active');
             });
 
             target.addEventListener('drop', (e) => {
-                console.log('💧 DROP EVENT SUR', target.tagName || 'NO_TAG');
-                console.log('=== DATATRANSFER COMPLETE ===');
-                console.log('  effectAllowed:', e.dataTransfer.effectAllowed);
-                console.log('  dropEffect:', e.dataTransfer.dropEffect);
-                console.log('  types:', e.dataTransfer.types);
-                console.log('  types length:', e.dataTransfer.types.length);
-                
-                // Essayer d'accéder à toutes les propriétés
-                console.log('=== Toutes les propriétés de dataTransfer ===');
-                for (let prop in e.dataTransfer) {
-                    try {
-                        console.log(`  ${prop}:`, e.dataTransfer[prop]);
-                    } catch (err) {
-                        console.log(`  ${prop}: [ERROR: ${err.message}]`);
-                    }
-                }
-                
-                console.log('=== e.dataTransfer.files ===');
-                console.log('  files:', e.dataTransfer.files);
-                console.log('  files.length:', e.dataTransfer.files.length);
-                
-                console.log('=== e.dataTransfer.items ===');
-                console.log('  items:', e.dataTransfer.items);
-                if (e.dataTransfer.items) {
-                    console.log('  items.length:', e.dataTransfer.items.length);
-                }
-                
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.remove('drag-active');
                 
                 const files = e.dataTransfer.files;
-                console.log('📂 Fichiers droppés:', files.length);
-                
-                if (files.length === 0) {
-                    console.error('⚠️  dataTransfer.files est VIDE!');
-                    showError('No files detected. Try dragging from File Explorer (not another browser tab or app).');
-                    return;
-                }
-                
-                Array.from(files).forEach((f, idx) => {
-                    console.log(`  Fichier ${idx + 1}:`, {
-                        name: f.name,
-                        type: f.type,
-                        size: f.size
-                    });
-                });
-                
                 const mp3Files = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.mp3'));
-                
-                console.log(`✅ MP3 files trouvés: ${mp3Files.length}/${files.length}`);
                 
                 if (mp3Files.length > 0) {
                     selectedFiles = mp3Files;
                     updateFileList();
-                } else {
+                } else if (files.length > 0) {
                     showError('Please drop MP3 files only');
                 }
             });
         }
 
-        // Écouter sur document, window et container
+        // Listen on document, window and container
         setupDragDrop(document);
         setupDragDrop(window);
         setupDragDrop(container);

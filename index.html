@@ -82,6 +82,12 @@
             z-index: 10;
             max-height: 90vh;
             overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .container.drag-active {
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3), 0 0 60px rgba(255, 107, 53, 0.3);
+            transform: scale(1.02);
         }
 
         @keyframes slideIn {
@@ -626,8 +632,44 @@
             }
         });
 
+        // Handle file selection from input
         document.getElementById('file').addEventListener('change', (e) => {
             selectedFiles = Array.from(e.target.files);
+            updateFileList();
+        });
+
+        // Drag & drop functionality
+        const container = document.querySelector('.container');
+        
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            container.classList.add('drag-active');
+        });
+
+        container.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            container.classList.remove('drag-active');
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            container.classList.remove('drag-active');
+            
+            const files = e.dataTransfer.files;
+            const mp3Files = Array.from(files).filter(f => f.name.endsWith('.mp3'));
+            
+            if (mp3Files.length > 0) {
+                selectedFiles = mp3Files;
+                updateFileList();
+            } else {
+                showError('Please drop MP3 files only');
+            }
+        });
+
+        function updateFileList() {
             const fileList = document.getElementById('fileList');
             
             if (selectedFiles.length > 0) {
@@ -641,7 +683,7 @@
             } else {
                 fileList.classList.remove('show');
             }
-        });
+        }
 
         document.getElementById('processBtn').addEventListener('click', async () => {
             if (selectedFiles.length === 0) {

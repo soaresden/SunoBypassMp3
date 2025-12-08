@@ -668,6 +668,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Fast FFT Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fft.js/1.0.7/fft.min.js"></script>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let selectedFiles = [];
@@ -962,57 +964,40 @@
         });
 
         /**
-         * TIME-STRETCHING WITH TONE.JS
+         * TIME-STRETCHING WITH FFT.JS - Fast & Non-Blocking
          * 
-         * Tone.js uses a sophisticated STFT-based time-stretching algorithm
-         * that preserves pitch and transients much better than simple phase vocoding.
+         * Uses FFT.js for fast Fourier transforms
+         * Processes in chunks with async to keep UI responsive
          */
         async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
             const sampleRate = audioBuffer.sampleRate;
             const originalLength = audioBuffer.length;
             
-            // Récupérer les données audio
-            const channelData = [];
-            for (let ch = 0; ch < channels; ch++) {
-                channelData.push(audioBuffer.getChannelData(ch));
-            }
-
-            // Créer un nouvel AudioBuffer pour le résultat
             const newLength = Math.floor(originalLength / tempo);
             const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
 
-            // Utiliser Tone.js pour le time-stretching via son algorithm interne
-            // On va traiter par chunks pour ne pas surcharger la mémoire
-            const chunkSize = 65536; // ~1.5 secondes à 44kHz
-            const outputChannels = [];
-
+            // Process each channel
             for (let ch = 0; ch < channels; ch++) {
-                const input = channelData[ch];
-                const output = new Float32Array(newLength);
+                const input = audioBuffer.getChannelData(ch);
+                const output = stretchedBuffer.getChannelData(ch);
                 
-                // Appliquer le time-stretching via un algorithme STFT amélioré
-                stretchAudioWithSTFT(input, output, tempo, chunkSize);
-                
-                outputChannels.push(output);
-            }
-
-            // Copier les données dans le buffer final
-            for (let ch = 0; ch < channels; ch++) {
-                stretchedBuffer.getChannelData(ch).set(outputChannels[ch]);
+                await stretchChannelAsync(input, output, tempo);
             }
 
             return stretchedBuffer;
         }
 
         /**
-         * Advanced STFT-based time-stretching (inspired by Tone.js approach)
-         * Uses phase vocoder with proper phase continuity
+         * Stretch a single channel with async processing to avoid blocking UI
          */
-        function stretchAudioWithSTFT(input, output, tempo, chunkSize) {
-            const fftSize = 2048;
+        async function stretchChannelAsync(input, output, tempo) {
+            const fftSize = 1024; // Smaller FFT for faster computation
             const hopSize = fftSize / 4;
             const stride = Math.max(1, Math.round(hopSize * tempo));
+            
+            // Create FFT instance
+            const fft = new FFT(fftSize);
             
             // Hann window
             const window = new Float32Array(fftSize);
@@ -1020,135 +1005,73 @@
                 window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
             }
 
-            // Buffers de travail
-            const frame = new Float32Array(fftSize);
-            const prevFrame = new Float32Array(fftSize);
-            const nextFrame = new Float32Array(fftSize);
+            const frame = new Float32Array(fftSize * 2); // Real + Imag parts
+            const lastPhase = new Float32Array(fftSize);
+            const phaseAdvance = new Float32Array(fftSize);
             
-            let inputPos = 0;
-            let outputPos = 0;
-            const lastPhase = new Float32Array(fftSize / 2);
-            const expectedPhase = new Float32Array(fftSize / 2);
-
-            // Expected phase advance for each bin
-            const phaseAdvance = new Float32Array(fftSize / 2);
-            for (let k = 0; k < fftSize / 2; k++) {
+            for (let k = 0; k < fftSize; k++) {
                 phaseAdvance[k] = (2 * Math.PI * k * hopSize) / fftSize;
             }
 
+            let inputPos = 0;
+            let outputPos = 0;
+            let chunkCount = 0;
+
             while (inputPos + fftSize <= input.length && outputPos + fftSize <= output.length) {
-                // Extract frame
-                for (let i = 0; i < fftSize; i++) {
-                    frame[i] = (input[inputPos + i] || 0) * window[i];
+                // Yield to browser every N chunks
+                if (chunkCount % 32 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
                 }
 
-                // FFT analysis (simplified - using complex number representation)
-                const spectrum = simpleFFT(frame);
+                // Extract and window frame
+                for (let i = 0; i < fftSize; i++) {
+                    frame[i * 2] = (input[inputPos + i] || 0) * window[i]; // Real
+                    frame[i * 2 + 1] = 0; // Imaginary
+                }
+
+                // Forward FFT
+                fft.forward(frame);
 
                 // Phase vocoder processing
-                const processedSpectrum = processPhaseVocoder(
-                    spectrum,
-                    lastPhase,
-                    phaseAdvance,
-                    expectedPhase
-                );
+                for (let k = 0; k < fftSize; k++) {
+                    const real = frame[k * 2];
+                    const imag = frame[k * 2 + 1];
+                    
+                    // Magnitude
+                    const magnitude = Math.sqrt(real * real + imag * imag);
+                    
+                    // Phase
+                    let phase = Math.atan2(imag, real);
+                    
+                    // Phase difference and unwrap
+                    let phaseDiff = phase - lastPhase[k];
+                    while (phaseDiff > Math.PI) phaseDiff -= 2 * Math.PI;
+                    while (phaseDiff < -Math.PI) phaseDiff += 2 * Math.PI;
+                    
+                    // Expected phase with continuity
+                    const expectedPhase = lastPhase[k] + phaseAdvance[k] + phaseDiff;
+                    lastPhase[k] = phase;
+                    
+                    // Update frame with phase-vocoded values
+                    frame[k * 2] = magnitude * Math.cos(expectedPhase);
+                    frame[k * 2 + 1] = magnitude * Math.sin(expectedPhase);
+                }
 
-                // IFFT synthesis
-                const synth = simpleIFFT(processedSpectrum, fftSize);
+                // Inverse FFT
+                fft.inverse(frame);
 
                 // Overlap-add
                 for (let i = 0; i < fftSize; i++) {
-                    output[outputPos + i] = (output[outputPos + i] || 0) + synth[i] * window[i];
-                }
-
-                // Store phase for next iteration
-                for (let k = 0; k < fftSize / 2; k++) {
-                    lastPhase[k] = Math.atan2(
-                        processedSpectrum[k].imag,
-                        processedSpectrum[k].real
-                    );
+                    output[outputPos + i] = (output[outputPos + i] || 0) + frame[i * 2] * window[i] / fftSize;
                 }
 
                 inputPos += stride;
                 outputPos += hopSize;
+                chunkCount++;
             }
 
             // Normalize
             normalizeWithDynamicRange(output);
-        }
-
-        /**
-         * Simple FFT using Web Audio API's capability
-         * Returns complex numbers [real, imag] for each bin
-         */
-        function simpleFFT(realSignal) {
-            const n = realSignal.length;
-            const spectrum = [];
-            
-            // Simple DFT (not true FFT, but sufficient for this use case)
-            for (let k = 0; k < n / 2; k++) {
-                let real = 0, imag = 0;
-                for (let n_idx = 0; n_idx < n; n_idx++) {
-                    const angle = -2 * Math.PI * k * n_idx / n;
-                    real += realSignal[n_idx] * Math.cos(angle);
-                    imag += realSignal[n_idx] * Math.sin(angle);
-                }
-                spectrum[k] = { real: real / n, imag: imag / n };
-            }
-            
-            return spectrum;
-        }
-
-        /**
-         * Simple IFFT
-         */
-        function simpleIFFT(spectrum, fftSize) {
-            const output = new Float32Array(fftSize);
-            
-            for (let n = 0; n < fftSize; n++) {
-                let real = 0, imag = 0;
-                for (let k = 0; k < spectrum.length; k++) {
-                    const angle = 2 * Math.PI * k * n / fftSize;
-                    real += spectrum[k].real * Math.cos(angle) - spectrum[k].imag * Math.sin(angle);
-                    imag += spectrum[k].real * Math.sin(angle) + spectrum[k].imag * Math.cos(angle);
-                }
-                output[n] = real * 2;
-            }
-            
-            return output;
-        }
-
-        /**
-         * Phase vocoder with phase continuity and peak locking
-         */
-        function processPhaseVocoder(spectrum, lastPhase, phaseAdvance, expectedPhase) {
-            const processed = [];
-            
-            for (let k = 0; k < spectrum.length; k++) {
-                const bin = spectrum[k];
-                
-                // Calculate magnitude and phase
-                const magnitude = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag);
-                const phase = Math.atan2(bin.imag, bin.real);
-                
-                // Phase difference
-                let phaseDiff = phase - lastPhase[k];
-                
-                // Unwrap phase (bring to [-pi, pi])
-                while (phaseDiff > Math.PI) phaseDiff -= 2 * Math.PI;
-                while (phaseDiff < -Math.PI) phaseDiff += 2 * Math.PI;
-                
-                // Add expected phase advance
-                expectedPhase[k] = lastPhase[k] + phaseAdvance[k] + phaseDiff;
-                
-                // Convert back to rectangular
-                processed[k] = {
-                    real: magnitude * Math.cos(expectedPhase[k]),
-                    imag: magnitude * Math.sin(expectedPhase[k])
-                };
-            }
-            
-            return processed;
         }
 
         // Normalize audio while preserving dynamic range

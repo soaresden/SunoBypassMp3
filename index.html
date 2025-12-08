@@ -1081,13 +1081,13 @@
         });
 
         /**
-         * HIGH-QUALITY TIME-STRETCHING WITH SONIC.JS
+         * PSOLA-BASED TIME-STRETCHING (Pitch Synchronous Overlap-Add)
          * 
-         * Sonic.js uses a sophisticated algorithm that:
-         * - Preserves pitch automatically
-         * - Handles transients better than phase vocoder
-         * - Minimizes artifacts
-         * - Much closer to the original sound
+         * PSOLA is much better than phase vocoder for preserving audio quality:
+         * - Detects pitch periods
+         * - Replicates/removes periods to change tempo
+         * - Preserves formants and transients
+         * - Minimal artifacts
          */
         async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
@@ -1097,76 +1097,128 @@
             const newLength = Math.floor(originalLength / tempo);
             const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
 
-            // Process each channel with Sonic.js
             for (let ch = 0; ch < channels; ch++) {
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
                 
-                await stretchChannelWithSonic(input, output, tempo, sampleRate);
+                await stretchChannelPSOLA(input, output, tempo, sampleRate);
             }
 
             return stretchedBuffer;
         }
 
         /**
-         * Stretch audio using Sonic.js library
+         * PSOLA implementation for high-quality time-stretching
          */
-        async function stretchChannelWithSonic(input, output, tempo, sampleRate) {
-            // Create Sonic instance
-            const sonic = new Sonic(
-                sampleRate,
-                sampleRate,
-                1,
-                4096  // Buffer size
-            );
+        async function stretchChannelPSOLA(input, output, tempo, sampleRate) {
+            const windowSize = 2048;
+            const hopSize = 512;
+            const stride = Math.max(1, Math.round(hopSize * tempo));
+            
+            // Hann window for smooth transitions
+            const window = new Float32Array(windowSize);
+            for (let i = 0; i < windowSize; i++) {
+                window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (windowSize - 1)));
+            }
 
-            // Set speed (tempo)
-            sonic.setSpeed(tempo);
+            // Autocorrelation window for pitch detection
+            const autoWindow = new Float32Array(windowSize);
+            for (let i = 0; i < windowSize; i++) {
+                autoWindow[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (windowSize - 1)));
+                autoWindow[i] *= autoWindow[i]; // Square for autocorrelation
+            }
 
-            // Process input in chunks to avoid blocking
-            const chunkSize = 4096;
             let inputPos = 0;
             let outputPos = 0;
             let chunkCount = 0;
+            
+            const frame = new Float32Array(windowSize);
+            const outFrame = new Float32Array(windowSize);
 
-            while (inputPos < input.length) {
-                // Yield every 16 chunks
+            while (inputPos + windowSize <= input.length && outputPos < output.length) {
+                // Yield to prevent UI blocking
                 if (chunkCount % 16 === 0) {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
 
-                // Get chunk of input
-                const remainingInput = input.length - inputPos;
-                const currentChunkSize = Math.min(chunkSize, remainingInput);
+                // Extract frame
+                for (let i = 0; i < windowSize; i++) {
+                    frame[i] = (input[inputPos + i] || 0) * window[i];
+                }
+
+                // Simple pitch detection (autocorrelation)
+                const pitchPeriod = detectPitchPeriod(frame, autoWindow, sampleRate);
                 
-                // Write to sonic
-                for (let i = 0; i < currentChunkSize; i++) {
-                    sonic.write(input[inputPos + i]);
+                // PSOLA processing: stretch by replicating/removing periods
+                processPSOLA(frame, outFrame, pitchPeriod, tempo, window);
+
+                // Overlap-add to output
+                for (let i = 0; i < windowSize && outputPos + i < output.length; i++) {
+                    output[outputPos + i] = (output[outputPos + i] || 0) + outFrame[i];
                 }
 
-                // Read from sonic
-                let sample;
-                while ((sample = sonic.read()) !== null) {
-                    if (outputPos < output.length) {
-                        output[outputPos++] = sample;
-                    }
-                }
-
-                inputPos += currentChunkSize;
+                inputPos += stride;
+                outputPos += hopSize;
                 chunkCount++;
-            }
-
-            // Flush remaining samples
-            sonic.flush();
-            let sample;
-            while ((sample = sonic.read()) !== null) {
-                if (outputPos < output.length) {
-                    output[outputPos++] = sample;
-                }
             }
 
             // Normalize
             normalizeWithDynamicRange(output);
+        }
+
+        /**
+         * Detect pitch period using autocorrelation
+         */
+        function detectPitchPeriod(signal, window, sampleRate) {
+            const minPeriod = Math.floor(sampleRate / 400);  // 400 Hz max
+            const maxPeriod = Math.floor(sampleRate / 60);   // 60 Hz min
+            
+            let maxCorr = 0;
+            let bestPeriod = 256;
+
+            // Simplified autocorrelation
+            for (let lag = minPeriod; lag < maxPeriod; lag += 4) {
+                let corr = 0;
+                for (let i = 0; i < signal.length - lag; i++) {
+                    corr += signal[i] * signal[i + lag] * window[i];
+                }
+                
+                if (corr > maxCorr) {
+                    maxCorr = corr;
+                    bestPeriod = lag;
+                }
+            }
+
+            return Math.max(64, Math.min(512, bestPeriod));
+        }
+
+        /**
+         * PSOLA: modify frame by pitch period replication/removal
+         */
+        function processPSOLA(inFrame, outFrame, pitchPeriod, tempo, window) {
+            outFrame.fill(0);
+            
+            // Copy periods with overlap-add based on tempo
+            let inPos = 0;
+            let outPos = 0;
+            const periodLength = Math.round(pitchPeriod);
+            
+            while (inPos + periodLength <= inFrame.length && outPos + periodLength <= outFrame.length) {
+                // Extract period
+                for (let i = 0; i < periodLength; i++) {
+                    if (inPos + i < inFrame.length) {
+                        const period = inFrame[inPos + i];
+                        
+                        // Apply windowing for smooth transitions
+                        const w = 0.5 * (1 - Math.cos(2 * Math.PI * i / periodLength));
+                        outFrame[outPos + i] += period * w;
+                    }
+                }
+                
+                // Move by appropriate amounts based on tempo
+                inPos += periodLength;
+                outPos += Math.round(periodLength / tempo);
+            }
         }
 
         // Normalize audio while preserving dynamic range

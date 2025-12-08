@@ -631,13 +631,45 @@
         </div>
 
         <div class="tempo-control">
-            <label class="tempo-label">⚙️ Playback Speed:</label>
-            <div class="tempo-controls">
-                <button type="button" class="tempo-btn" id="minusBtn">−</button>
-                <div class="tempo-display" id="tempoDisplay">2.0x</div>
-                <button type="button" class="tempo-btn" id="plusBtn">+</button>
+            <label class="tempo-label">⚙️ Mode:</label>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                    <input type="radio" name="tempo-mode" value="manual" checked>
+                    <span>Playback Speed</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                    <input type="radio" name="tempo-mode" value="duration">
+                    <span>Target Duration</span>
+                </label>
             </div>
-            <div class="tempo-range">0.25x to 4.0x</div>
+
+            <!-- Mode Manual: Playback Speed -->
+            <div id="manualMode">
+                <label style="display: block; margin-bottom: 8px; color: #666; font-size: 12px;">Playback Speed:</label>
+                <div class="tempo-controls">
+                    <button type="button" class="tempo-btn" id="minusBtn">−</button>
+                    <div class="tempo-display" id="tempoDisplay">2.0x</div>
+                    <button type="button" class="tempo-btn" id="plusBtn">+</button>
+                </div>
+                <div class="tempo-range">0.25x to 4.0x</div>
+            </div>
+
+            <!-- Mode Duration: Target Duration -->
+            <div id="durationMode" style="display: none;">
+                <label style="display: block; margin-bottom: 8px; color: #666; font-size: 12px;">Target Duration (MM:SS):</label>
+                <input type="text" id="targetDuration" placeholder="08:00" maxlength="5" style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 2px solid #FF6B35;
+                    border-radius: 10px;
+                    font-size: 16px;
+                    text-align: center;
+                    font-weight: 600;
+                    color: #FF6B35;
+                ">
+                <div class="tempo-range" style="margin-top: 8px;">Original duration will be shown</div>
+            </div>
         </div>
 
         <button class="process-btn" id="processBtn">🚀 Process All Files</button>
@@ -669,10 +701,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <script>
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let selectedFiles = [];
         let processedFiles = [];
         let tempoValue = 2.0;
+        let tempoMode = 'manual'; // 'manual' ou 'duration'
 
         function formatDuration(seconds) {
             const hours = Math.floor(seconds / 3600);
@@ -687,6 +719,43 @@
                 return `${secs}s`;
             }
         }
+
+        // Parse MM:SS format to seconds
+        function parseTimeString(timeStr) {
+            const parts = timeStr.trim().split(':');
+            if (parts.length === 2) {
+                const minutes = parseInt(parts[0]);
+                const seconds = parseInt(parts[1]);
+                if (!isNaN(minutes) && !isNaN(seconds) && minutes >= 0 && seconds >= 0 && seconds < 60) {
+                    return minutes * 60 + seconds;
+                }
+            }
+            return null;
+        }
+
+        // Format seconds to MM:SS
+        function formatTimeString(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Handle tempo mode toggle
+        document.querySelectorAll('input[name="tempo-mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                tempoMode = e.target.value;
+                const manualMode = document.getElementById('manualMode');
+                const durationMode = document.getElementById('durationMode');
+                
+                if (tempoMode === 'manual') {
+                    manualMode.style.display = 'block';
+                    durationMode.style.display = 'none';
+                } else {
+                    manualMode.style.display = 'none';
+                    durationMode.style.display = 'block';
+                }
+            });
+        });
 
         function updateTempoDisplay() {
             document.getElementById('tempoDisplay').textContent = tempoValue.toFixed(1) + 'x';
@@ -708,6 +777,21 @@
                 tempoValue = Math.round(tempoValue * 10) / 10;
                 updateTempoDisplay();
             }
+        });
+
+        // Auto-format duration input
+        document.getElementById('targetDuration').addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^\d:]/g, '');
+            
+            if (value.length > 5) {
+                value = value.substring(0, 5);
+            }
+            
+            if (value.length === 2 && !value.includes(':')) {
+                value = value + ':';
+            }
+            
+            e.target.value = value;
         });
 
         // Handle file selection from input - ADD files progressively
@@ -816,7 +900,23 @@
                 return;
             }
 
-            const tempo = tempoValue;
+            // Calcul du tempo selon le mode
+            let tempo = tempoValue;
+            
+            if (tempoMode === 'duration') {
+                const targetDurationStr = document.getElementById('targetDuration').value;
+                const targetSeconds = parseTimeString(targetDurationStr);
+                
+                if (!targetSeconds) {
+                    showError('Invalid duration format. Use MM:SS (e.g., 08:00)');
+                    return;
+                }
+
+                // On va calculer le tempo une fois qu'on a la durée du premier fichier
+                // Pour l'instant, on va le faire fichier par fichier
+                tempo = null; // Signal pour calculer dynamiquement
+            }
+
             processedFiles = [];
 
             try {
@@ -839,14 +939,31 @@
                         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
                         const originalDuration = audioBuffer.duration;
 
+                        // Calculer le tempo si mode duration
+                        let actualTempo = tempo;
+                        if (tempo === null) {
+                            const targetDurationStr = document.getElementById('targetDuration').value;
+                            const targetSeconds = parseTimeString(targetDurationStr);
+                            actualTempo = originalDuration / targetSeconds;
+                        }
+
                         setProgress((i + 0.3) / totalFiles * 100, `Time-stretching ${file.name}...`);
-                        const stretchedBuffer = await stretchWithImprovedPhaseVocoder(audioBuffer, tempo);
+                        const stretchedBuffer = await stretchWithImprovedPhaseVocoder(audioBuffer, actualTempo);
 
                         setProgress((i + 0.7) / totalFiles * 100, `Encoding MP3 320kbps...`);
                         const blob = await encodeToMP3(stretchedBuffer);
 
                         const durationStr = formatDuration(originalDuration);
-                        const outputName = file.name.replace('.mp3', `_x${tempo}.mp3`).replace(/^/, `${durationStr}_`);
+                        const newDurationStr = formatDuration(stretchedBuffer.duration);
+                        
+                        // Mode duration: afficher le nouveau nom avec durée cible
+                        let outputName;
+                        if (tempoMode === 'duration') {
+                            outputName = file.name.replace('.mp3', `_${durationStr}_to_${newDurationStr}.mp3`);
+                        } else {
+                            outputName = file.name.replace('.mp3', `_x${actualTempo.toFixed(2)}.mp3`).replace(/^/, `${durationStr}_`);
+                        }
+                        
                         const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
                         processedFiles.push({
@@ -855,7 +972,7 @@
                             originalDuration: originalDuration,
                             newDuration: stretchedBuffer.duration,
                             sizeMB: sizeMB,
-                            tempo: tempo
+                            tempo: actualTempo
                         });
 
                         setProgress(((i + 1) / totalFiles) * 100, `Complete!`);

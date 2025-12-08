@@ -635,17 +635,17 @@
             
             <div style="display: flex; gap: 10px; margin-bottom: 12px;">
                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                    <input type="radio" name="tempo-mode" value="manual" checked>
+                    <input type="radio" name="tempo-mode" value="manual">
                     <span>Playback Speed</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                    <input type="radio" name="tempo-mode" value="duration">
+                    <input type="radio" name="tempo-mode" value="duration" checked>
                     <span>Target Duration</span>
                 </label>
             </div>
 
             <!-- Mode Manual: Playback Speed -->
-            <div id="manualMode">
+            <div id="manualMode" style="display: none;">
                 <label style="display: block; margin-bottom: 8px; color: #666; font-size: 12px;">Playback Speed:</label>
                 <div class="tempo-controls">
                     <button type="button" class="tempo-btn" id="minusBtn">−</button>
@@ -656,9 +656,9 @@
             </div>
 
             <!-- Mode Duration: Target Duration -->
-            <div id="durationMode" style="display: none;">
+            <div id="durationMode">
                 <label style="display: block; margin-bottom: 8px; color: #666; font-size: 12px;">Target Duration (MM:SS):</label>
-                <input type="text" id="targetDuration" placeholder="08:00" maxlength="5" style="
+                <input type="text" id="targetDuration" placeholder="08:00" value="08:00" maxlength="5" style="
                     width: 100%;
                     padding: 10px;
                     border: 2px solid #FF6B35;
@@ -699,13 +699,14 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Sonic.js for high-quality time-stretching -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sonic/1.0.1/sonic.min.js"></script>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let selectedFiles = [];
         let processedFiles = [];
         let tempoValue = 2.0;
-        let tempoMode = 'manual'; // 'manual' ou 'duration'
+        let tempoMode = 'duration'; // 'manual' ou 'duration' - duration par défaut
 
         function formatDuration(seconds) {
             const hours = Math.floor(seconds / 3600);
@@ -1080,171 +1081,88 @@
         });
 
         /**
-         * Fast Cooley-Tukey FFT Implementation (Radix-2)
-         * Non-blocking time-stretching with phase vocoder
+         * HIGH-QUALITY TIME-STRETCHING WITH SONIC.JS
+         * 
+         * Sonic.js uses a sophisticated algorithm that:
+         * - Preserves pitch automatically
+         * - Handles transients better than phase vocoder
+         * - Minimizes artifacts
+         * - Much closer to the original sound
          */
-        
-        class FastFFT {
-            constructor(size) {
-                this.size = size;
-                this.bitReverse = this.generateBitReverse(size);
-            }
-
-            generateBitReverse(n) {
-                const reverse = new Uint32Array(n);
-                for (let i = 0; i < n; i++) {
-                    let rev = 0;
-                    let num = i;
-                    for (let j = 0; j < Math.log2(n); j++) {
-                        rev = (rev << 1) | (num & 1);
-                        num >>= 1;
-                    }
-                    reverse[i] = rev;
-                }
-                return reverse;
-            }
-
-            forward(real, imag) {
-                const n = this.size;
-                
-                // Bit reversal
-                for (let i = 0; i < n; i++) {
-                    const j = this.bitReverse[i];
-                    if (i < j) {
-                        [real[i], real[j]] = [real[j], real[i]];
-                        [imag[i], imag[j]] = [imag[j], imag[i]];
-                    }
-                }
-
-                // Cooley-Tukey FFT
-                for (let len = 2; len <= n; len *= 2) {
-                    const angle = -2 * Math.PI / len;
-                    for (let i = 0; i < n; i += len) {
-                        for (let j = 0; j < len / 2; j++) {
-                            const wcos = Math.cos(angle * j);
-                            const wsin = Math.sin(angle * j);
-
-                            const k = i + j;
-                            const k2 = k + len / 2;
-
-                            const treal = wcos * real[k2] + wsin * imag[k2];
-                            const timag = wcos * imag[k2] - wsin * real[k2];
-
-                            real[k2] = real[k] - treal;
-                            imag[k2] = imag[k] - timag;
-                            real[k] = real[k] + treal;
-                            imag[k] = imag[k] + timag;
-                        }
-                    }
-                }
-            }
-
-            inverse(real, imag) {
-                const n = this.size;
-                
-                // Conjugate
-                for (let i = 0; i < n; i++) {
-                    imag[i] = -imag[i];
-                }
-
-                // Forward FFT
-                this.forward(real, imag);
-
-                // Conjugate again and normalize
-                for (let i = 0; i < n; i++) {
-                    real[i] /= n;
-                    imag[i] = -imag[i] / n;
-                }
-            }
-        }
-
         async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
+            const sampleRate = audioBuffer.sampleRate;
             const originalLength = audioBuffer.length;
+            
             const newLength = Math.floor(originalLength / tempo);
-            const stretchedBuffer = audioContext.createBuffer(channels, newLength, audioBuffer.sampleRate);
+            const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
 
+            // Process each channel with Sonic.js
             for (let ch = 0; ch < channels; ch++) {
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
-                await stretchChannelAsync(input, output, tempo);
+                
+                await stretchChannelWithSonic(input, output, tempo, sampleRate);
             }
 
             return stretchedBuffer;
         }
 
-        async function stretchChannelAsync(input, output, tempo) {
-            // Utiliser une FFT plus grande pour les ralentissements (meilleure qualité)
-            const fftSize = tempo < 1 ? 2048 : 1024;
-            const hopSize = fftSize / 4;
-            const stride = Math.max(1, Math.round(hopSize * tempo));
-            
-            const fft = new FastFFT(fftSize);
-            
-            // Hann window
-            const window = new Float32Array(fftSize);
-            for (let i = 0; i < fftSize; i++) {
-                window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
-            }
+        /**
+         * Stretch audio using Sonic.js library
+         */
+        async function stretchChannelWithSonic(input, output, tempo, sampleRate) {
+            // Create Sonic instance
+            const sonic = new Sonic(
+                sampleRate,
+                sampleRate,
+                1,
+                4096  // Buffer size
+            );
 
-            const real = new Float32Array(fftSize);
-            const imag = new Float32Array(fftSize);
-            const lastPhase = new Float32Array(fftSize);
-            const phaseAdvance = new Float32Array(fftSize);
-            
-            for (let k = 0; k < fftSize; k++) {
-                phaseAdvance[k] = (2 * Math.PI * k * hopSize) / fftSize;
-            }
+            // Set speed (tempo)
+            sonic.setSpeed(tempo);
 
+            // Process input in chunks to avoid blocking
+            const chunkSize = 4096;
             let inputPos = 0;
             let outputPos = 0;
             let chunkCount = 0;
 
-            while (inputPos + fftSize <= input.length && outputPos + fftSize <= output.length) {
-                // Yield every 32 chunks to keep UI responsive
-                if (chunkCount % 32 === 0) {
+            while (inputPos < input.length) {
+                // Yield every 16 chunks
+                if (chunkCount % 16 === 0) {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
 
-                // Extract and window input
-                for (let i = 0; i < fftSize; i++) {
-                    real[i] = (input[inputPos + i] || 0) * window[i];
-                    imag[i] = 0;
+                // Get chunk of input
+                const remainingInput = input.length - inputPos;
+                const currentChunkSize = Math.min(chunkSize, remainingInput);
+                
+                // Write to sonic
+                for (let i = 0; i < currentChunkSize; i++) {
+                    sonic.write(input[inputPos + i]);
                 }
 
-                // Forward FFT
-                fft.forward(real, imag);
-
-                // Phase vocoder processing
-                for (let k = 0; k < fftSize; k++) {
-                    const magnitude = Math.sqrt(real[k] * real[k] + imag[k] * imag[k]);
-                    let phase = Math.atan2(imag[k], real[k]);
-                    
-                    // Phase difference with unwrapping
-                    let phaseDiff = phase - lastPhase[k];
-                    while (phaseDiff > Math.PI) phaseDiff -= 2 * Math.PI;
-                    while (phaseDiff < -Math.PI) phaseDiff += 2 * Math.PI;
-                    
-                    // Expected phase with continuity
-                    const expectedPhase = lastPhase[k] + phaseAdvance[k] + phaseDiff;
-                    lastPhase[k] = phase;
-                    
-                    // Update FFT bins
-                    real[k] = magnitude * Math.cos(expectedPhase);
-                    imag[k] = magnitude * Math.sin(expectedPhase);
+                // Read from sonic
+                let sample;
+                while ((sample = sonic.read()) !== null) {
+                    if (outputPos < output.length) {
+                        output[outputPos++] = sample;
+                    }
                 }
 
-                // Inverse FFT
-                fft.inverse(real, imag);
-
-                // Overlap-add synthesis
-                for (let i = 0; i < fftSize; i++) {
-                    output[outputPos + i] = (output[outputPos + i] || 0) + real[i] * window[i];
-                }
-
-                inputPos += stride;
-                outputPos += hopSize;
+                inputPos += currentChunkSize;
                 chunkCount++;
+            }
+
+            // Flush remaining samples
+            sonic.flush();
+            let sample;
+            while ((sample = sonic.read()) !== null) {
+                if (outputPos < output.length) {
+                    output[outputPos++] = sample;
+                }
             }
 
             // Normalize

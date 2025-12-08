@@ -187,7 +187,7 @@
             border-radius: 8px;
             font-size: 12px;
             display: none;
-            max-height: 100px;
+            max-height: 200px;
             overflow-y: auto;
         }
 
@@ -195,14 +195,72 @@
             display: block;
         }
 
+        .file-list-header {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
         .file-item {
-            padding: 4px 0;
+            padding: 8px;
             color: #555;
             border-bottom: 1px solid #FFE0CC;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .file-item:hover {
+            background: #fff5f0;
         }
 
         .file-item:last-child {
             border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .file-item-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .file-item-name {
+            font-weight: 600;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .file-item-size {
+            font-size: 10px;
+            color: #999;
+        }
+
+        .file-item-remove {
+            background: none;
+            border: none;
+            color: #FF6B35;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 10px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+        }
+
+        .file-item-remove:hover {
+            color: #D84315;
+            transform: scale(1.2);
         }
 
         .tempo-control {
@@ -566,8 +624,11 @@
             <div class="badge-info">🎚️ Improved Quality Algorithm</div>
         </div>
         
-        <input type="file" id="file" accept=".mp3" multiple required>
-        <div class="file-list" id="fileList"></div>
+        <input type="file" id="file" accept=".mp3" multiple>
+        <div class="file-list" id="fileList">
+            <div class="file-list-header" id="fileListHeader" style="display: none;">📁 Files to process:</div>
+            <div id="fileListItems"></div>
+        </div>
 
         <div class="tempo-control">
             <label class="tempo-label">⚙️ Playback Speed:</label>
@@ -648,10 +709,23 @@
             }
         });
 
-        // Handle file selection from input
+        // Handle file selection from input - ADD files progressively
         document.getElementById('file').addEventListener('change', (e) => {
-            selectedFiles = Array.from(e.target.files);
+            const newFiles = Array.from(e.target.files);
+            
+            // Ajouter les nouveaux fichiers à la liste existante
+            newFiles.forEach(file => {
+                // Vérifier si le fichier est déjà dans la liste
+                const isDuplicate = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!isDuplicate) {
+                    selectedFiles.push(file);
+                }
+            });
+            
             updateFileList();
+            
+            // Réinitialiser le file input pour permettre de sélectionner les mêmes fichiers à nouveau
+            e.target.value = '';
         });
 
         // Drag & drop functionality
@@ -699,20 +773,41 @@
         setupDragDrop(container);
 
         function updateFileList() {
-            const fileList = document.getElementById('fileList');
+            const fileListContainer = document.getElementById('fileList');
+            const fileListItems = document.getElementById('fileListItems');
+            const fileListHeader = document.getElementById('fileListHeader');
             
             if (selectedFiles.length > 0) {
-                let html = `<strong>${selectedFiles.length} file(s) selected:</strong><br>`;
-                selectedFiles.forEach(f => {
+                fileListHeader.style.display = 'block';
+                let html = '';
+                
+                selectedFiles.forEach((f, idx) => {
                     const mb = (f.size / 1024 / 1024).toFixed(2);
-                    html += `<div class="file-item">📄 ${f.name} (${mb} MB)</div>`;
+                    html += `
+                        <div class="file-item">
+                            <div class="file-item-info">
+                                <div class="file-item-name">📄 ${f.name}</div>
+                                <div class="file-item-size">${mb} MB</div>
+                            </div>
+                            <button type="button" class="file-item-remove" onclick="removeFile(${idx})" title="Remove file">✕</button>
+                        </div>
+                    `;
                 });
-                fileList.innerHTML = html;
-                fileList.classList.add('show');
+                
+                fileListItems.innerHTML = html;
+                fileListContainer.classList.add('show');
             } else {
-                fileList.classList.remove('show');
+                fileListHeader.style.display = 'none';
+                fileListItems.innerHTML = '';
+                fileListContainer.classList.remove('show');
             }
         }
+
+        // Fonction pour supprimer un fichier de la liste
+        window.removeFile = function(idx) {
+            selectedFiles.splice(idx, 1);
+            updateFileList();
+        };
 
         document.getElementById('processBtn').addEventListener('click', async () => {
             if (selectedFiles.length === 0) {
@@ -750,7 +845,7 @@
                         const blob = await encodeToMP3(stretchedBuffer);
 
                         const durationStr = formatDuration(originalDuration);
-                        const outputName = file.name.replace('.mp3', `_${durationStr}_x${tempo}.mp3`);
+                        const outputName = file.name.replace('.mp3', `_x${tempo}.mp3`).replace(/^/, `${durationStr}_`);
                         const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
                         processedFiles.push({

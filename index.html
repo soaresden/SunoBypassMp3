@@ -637,7 +637,7 @@
                 <div class="tempo-display" id="tempoDisplay">2.0x</div>
                 <button type="button" class="tempo-btn" id="plusBtn">+</button>
             </div>
-            <div class="tempo-range">0.5x to 4.0x</div>
+            <div class="tempo-range">0.25x to 4.0x</div>
         </div>
 
         <button class="process-btn" id="processBtn">🚀 Process All Files</button>
@@ -703,8 +703,8 @@
 
         document.getElementById('minusBtn').addEventListener('click', (e) => {
             e.preventDefault();
-            if (tempoValue > 0.5) {
-                tempoValue = Math.max(0.5, tempoValue - 0.1);
+            if (tempoValue > 0.25) {
+                tempoValue = Math.max(0.25, tempoValue - 0.1);
                 tempoValue = Math.round(tempoValue * 10) / 10;
                 updateTempoDisplay();
             }
@@ -1056,7 +1056,8 @@
         }
 
         async function stretchChannelAsync(input, output, tempo) {
-            const fftSize = 1024;
+            // Utiliser une FFT plus grande pour les ralentissements (meilleure qualité)
+            const fftSize = tempo < 1 ? 2048 : 1024;
             const hopSize = fftSize / 4;
             const stride = Math.max(1, Math.round(hopSize * tempo));
             

@@ -668,8 +668,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <!-- Fast FFT Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fft.js/1.0.7/fft.min.js"></script>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let selectedFiles = [];
@@ -964,40 +962,105 @@
         });
 
         /**
-         * TIME-STRETCHING WITH FFT.JS - Fast & Non-Blocking
-         * 
-         * Uses FFT.js for fast Fourier transforms
-         * Processes in chunks with async to keep UI responsive
+         * Fast Cooley-Tukey FFT Implementation (Radix-2)
+         * Non-blocking time-stretching with phase vocoder
          */
+        
+        class FastFFT {
+            constructor(size) {
+                this.size = size;
+                this.bitReverse = this.generateBitReverse(size);
+            }
+
+            generateBitReverse(n) {
+                const reverse = new Uint32Array(n);
+                for (let i = 0; i < n; i++) {
+                    let rev = 0;
+                    let num = i;
+                    for (let j = 0; j < Math.log2(n); j++) {
+                        rev = (rev << 1) | (num & 1);
+                        num >>= 1;
+                    }
+                    reverse[i] = rev;
+                }
+                return reverse;
+            }
+
+            forward(real, imag) {
+                const n = this.size;
+                
+                // Bit reversal
+                for (let i = 0; i < n; i++) {
+                    const j = this.bitReverse[i];
+                    if (i < j) {
+                        [real[i], real[j]] = [real[j], real[i]];
+                        [imag[i], imag[j]] = [imag[j], imag[i]];
+                    }
+                }
+
+                // Cooley-Tukey FFT
+                for (let len = 2; len <= n; len *= 2) {
+                    const angle = -2 * Math.PI / len;
+                    for (let i = 0; i < n; i += len) {
+                        for (let j = 0; j < len / 2; j++) {
+                            const wcos = Math.cos(angle * j);
+                            const wsin = Math.sin(angle * j);
+
+                            const k = i + j;
+                            const k2 = k + len / 2;
+
+                            const treal = wcos * real[k2] + wsin * imag[k2];
+                            const timag = wcos * imag[k2] - wsin * real[k2];
+
+                            real[k2] = real[k] - treal;
+                            imag[k2] = imag[k] - timag;
+                            real[k] = real[k] + treal;
+                            imag[k] = imag[k] + timag;
+                        }
+                    }
+                }
+            }
+
+            inverse(real, imag) {
+                const n = this.size;
+                
+                // Conjugate
+                for (let i = 0; i < n; i++) {
+                    imag[i] = -imag[i];
+                }
+
+                // Forward FFT
+                this.forward(real, imag);
+
+                // Conjugate again and normalize
+                for (let i = 0; i < n; i++) {
+                    real[i] /= n;
+                    imag[i] = -imag[i] / n;
+                }
+            }
+        }
+
         async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
-            const sampleRate = audioBuffer.sampleRate;
             const originalLength = audioBuffer.length;
-            
             const newLength = Math.floor(originalLength / tempo);
-            const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
+            const stretchedBuffer = audioContext.createBuffer(channels, newLength, audioBuffer.sampleRate);
 
-            // Process each channel
             for (let ch = 0; ch < channels; ch++) {
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
-                
                 await stretchChannelAsync(input, output, tempo);
             }
 
             return stretchedBuffer;
         }
 
-        /**
-         * Stretch a single channel with async processing to avoid blocking UI
-         */
         async function stretchChannelAsync(input, output, tempo) {
-            const fftSize = 1024; // Smaller FFT for faster computation
+            const fftSize = 1024;
             const hopSize = fftSize / 4;
             const stride = Math.max(1, Math.round(hopSize * tempo));
             
-            // Create FFT instance
-            const fft = new FFT(fftSize);
+            const fft = new FastFFT(fftSize);
             
             // Hann window
             const window = new Float32Array(fftSize);
@@ -1005,7 +1068,8 @@
                 window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
             }
 
-            const frame = new Float32Array(fftSize * 2); // Real + Imag parts
+            const real = new Float32Array(fftSize);
+            const imag = new Float32Array(fftSize);
             const lastPhase = new Float32Array(fftSize);
             const phaseAdvance = new Float32Array(fftSize);
             
@@ -1018,32 +1082,26 @@
             let chunkCount = 0;
 
             while (inputPos + fftSize <= input.length && outputPos + fftSize <= output.length) {
-                // Yield to browser every N chunks
+                // Yield every 32 chunks to keep UI responsive
                 if (chunkCount % 32 === 0) {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
 
-                // Extract and window frame
+                // Extract and window input
                 for (let i = 0; i < fftSize; i++) {
-                    frame[i * 2] = (input[inputPos + i] || 0) * window[i]; // Real
-                    frame[i * 2 + 1] = 0; // Imaginary
+                    real[i] = (input[inputPos + i] || 0) * window[i];
+                    imag[i] = 0;
                 }
 
                 // Forward FFT
-                fft.forward(frame);
+                fft.forward(real, imag);
 
                 // Phase vocoder processing
                 for (let k = 0; k < fftSize; k++) {
-                    const real = frame[k * 2];
-                    const imag = frame[k * 2 + 1];
+                    const magnitude = Math.sqrt(real[k] * real[k] + imag[k] * imag[k]);
+                    let phase = Math.atan2(imag[k], real[k]);
                     
-                    // Magnitude
-                    const magnitude = Math.sqrt(real * real + imag * imag);
-                    
-                    // Phase
-                    let phase = Math.atan2(imag, real);
-                    
-                    // Phase difference and unwrap
+                    // Phase difference with unwrapping
                     let phaseDiff = phase - lastPhase[k];
                     while (phaseDiff > Math.PI) phaseDiff -= 2 * Math.PI;
                     while (phaseDiff < -Math.PI) phaseDiff += 2 * Math.PI;
@@ -1052,17 +1110,17 @@
                     const expectedPhase = lastPhase[k] + phaseAdvance[k] + phaseDiff;
                     lastPhase[k] = phase;
                     
-                    // Update frame with phase-vocoded values
-                    frame[k * 2] = magnitude * Math.cos(expectedPhase);
-                    frame[k * 2 + 1] = magnitude * Math.sin(expectedPhase);
+                    // Update FFT bins
+                    real[k] = magnitude * Math.cos(expectedPhase);
+                    imag[k] = magnitude * Math.sin(expectedPhase);
                 }
 
                 // Inverse FFT
-                fft.inverse(frame);
+                fft.inverse(real, imag);
 
-                // Overlap-add
+                // Overlap-add synthesis
                 for (let i = 0; i < fftSize; i++) {
-                    output[outputPos + i] = (output[outputPos + i] || 0) + frame[i * 2] * window[i] / fftSize;
+                    output[outputPos + i] = (output[outputPos + i] || 0) + real[i] * window[i];
                 }
 
                 inputPos += stride;

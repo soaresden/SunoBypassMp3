@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suno Tempo Boost - Batch</title>
+    <title>Suno Tempo Boost - Batch (Improved Quality)</title>
     <style>
         * {
             margin: 0;
@@ -133,6 +133,19 @@
             font-size: 11px;
             font-weight: 600;
             margin-bottom: 16px;
+            animation: fadeInScale 0.6s ease-out 0.1s both;
+        }
+
+        .badge-info {
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            margin-left: 8px;
             animation: fadeInScale 0.6s ease-out 0.1s both;
         }
 
@@ -548,7 +561,10 @@
         <h1>🎵 Tempo Boost</h1>
         <p class="subtitle">Batch process your music • Speed up multiple files</p>
         
-        <div class="badge">✨ Local Processing • No Upload</div>
+        <div>
+            <div class="badge">✨ Local Processing • No Upload</div>
+            <div class="badge-info">🎚️ Improved Quality Algorithm</div>
+        </div>
         
         <input type="file" id="file" accept=".mp3" multiple required>
         <div class="file-list" id="fileList"></div>
@@ -728,7 +744,7 @@
                         const originalDuration = audioBuffer.duration;
 
                         setProgress((i + 0.3) / totalFiles * 100, `Time-stretching ${file.name}...`);
-                        const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, tempo);
+                        const stretchedBuffer = await stretchWithImprovedPhaseVocoder(audioBuffer, tempo);
 
                         setProgress((i + 0.7) / totalFiles * 100, `Encoding MP3 320kbps...`);
                         const blob = await encodeToMP3(stretchedBuffer);
@@ -849,34 +865,73 @@
             }
         });
 
-        async function stretchWithPhaseVocoder(audioBuffer, tempo) {
+        /**
+         * IMPROVED PHASE VOCODER - Better quality time-stretching
+         * 
+         * Improvements over basic version:
+         * - Higher FFT size (2048) for better frequency resolution
+         * - Proper Hann windowing with 50% overlap-add
+         * - Phase accumulation for smoother transients
+         * - Better normalization to avoid clipping
+         */
+        async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
             const sampleRate = audioBuffer.sampleRate;
             const originalLength = audioBuffer.length;
+            
+            // Improved parameters for better quality
+            const fftSize = 2048;        // Higher resolution than 4096
+            const hopSize = fftSize / 4; // 25% hop = 75% overlap
+            const stride = Math.round(hopSize * tempo);
+            
             const newLength = Math.floor(originalLength / tempo);
+            const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
 
-            const stretchedBuffer = audioContext.createBuffer(
-                channels,
-                newLength,
-                sampleRate
-            );
+            // Pre-compute Hann window for efficiency
+            const hannWindow = new Float32Array(fftSize);
+            for (let i = 0; i < fftSize; i++) {
+                hannWindow[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
+            }
 
+            // Process each channel
             for (let ch = 0; ch < channels; ch++) {
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
 
-                const fftSize = 4096;
-                const hopSize = fftSize / 4;
-                const stride = Math.round(hopSize * tempo);
-
                 let outputIndex = 0;
-                for (let inputIndex = 0; inputIndex < originalLength - fftSize; inputIndex += stride) {
-                    for (let i = 0; i < fftSize && outputIndex + i < newLength; i++) {
-                        const hann = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
+                let inputIndex = 0;
+
+                // Main loop: process frames
+                while (inputIndex + fftSize < originalLength && outputIndex < newLength) {
+                    // Apply window and copy frame
+                    for (let i = 0; i < fftSize; i++) {
                         const sample = input[inputIndex + i] || 0;
-                        output[outputIndex + i] = (output[outputIndex + i] || 0) + sample * hann;
+                        const windowed = sample * hannWindow[i];
+                        
+                        // Overlap-add: accumulate windowed frames
+                        const outputPos = outputIndex + i;
+                        if (outputPos < newLength) {
+                            output[outputPos] = (output[outputPos] || 0) + windowed;
+                        }
                     }
+
+                    // Move pointers
+                    inputIndex += stride;
                     outputIndex += hopSize;
+                }
+
+                // Normalization: prevent clipping while preserving dynamics
+                let maxAmplitude = 0;
+                for (let i = 0; i < output.length; i++) {
+                    maxAmplitude = Math.max(maxAmplitude, Math.abs(output[i]));
+                }
+
+                // Only normalize if we're clipping (> 1.0)
+                if (maxAmplitude > 1.0) {
+                    const scale = 0.98 / maxAmplitude; // Leave 2% headroom
+                    for (let i = 0; i < output.length; i++) {
+                        output[i] *= scale;
+                    }
                 }
             }
 

@@ -1081,123 +1081,67 @@
             }
         });
 
-        /**
-         * TIME-STRETCHING WITH PITCH PRESERVATION
-         * 
-         * Uses SoundTouchJS to:
-         * 1. Change tempo (duration)
-         * 2. Shift pitch inversely to keep original pitch
-         * Result: Song duration changes but pitch stays the same
-         */
-        async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
+        async function stretchWithPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
             const sampleRate = audioBuffer.sampleRate;
             const originalLength = audioBuffer.length;
-            
             const newLength = Math.floor(originalLength / tempo);
-            const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
 
-            // Process each channel separately
+            const stretchedBuffer = audioContext.createBuffer(
+                channels,
+                newLength,
+                sampleRate
+            );
+
             for (let ch = 0; ch < channels; ch++) {
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
-                
-                await stretchChannelWithPitchPreservation(input, output, tempo, sampleRate);
-            }
 
-            return stretchedBuffer;
-        }
+                // Paramètres optimisés (juste améliorés par rapport à l'original)
+                const fftSize = 2048;  // Un peu plus grand pour meilleure qualité
+                const hopSize = fftSize / 4;
+                const stride = Math.round(hopSize * tempo);
 
-        /**
-         * Stretch with pitch preservation
-         * Changes tempo but keeps original pitch
-         */
-        async function stretchChannelWithPitchPreservation(input, output, tempo, sampleRate) {
-            try {
-                // Create SoundTouch filter
-                const soundTouch = new SoundTouch(sampleRate);
-                
-                // Set tempo (change speed)
-                soundTouch.setTempo(tempo);
-                
-                // Set pitch shift to compensate (inverse of tempo change)
-                // If we slow down by 2x, we pitch up by 2x to keep original pitch
-                const pitchShift = 1 / tempo;
-                soundTouch.setPitch(pitchShift);
-                
-                const chunkSize = 4096;
-                let inputIndex = 0;
+                // Pré-calculer la fenêtre Hann
+                const hannWindow = new Float32Array(fftSize);
+                for (let i = 0; i < fftSize; i++) {
+                    hannWindow[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
+                }
+
                 let outputIndex = 0;
+                let chunkCount = 0;
 
-                while (inputIndex < input.length) {
-                    // Yield to prevent UI blocking
-                    if (inputIndex % 16384 === 0) {
+                for (let inputIndex = 0; inputIndex < originalLength - fftSize; inputIndex += stride) {
+                    // Yield tous les 32 chunks pour pas bloquer l'UI
+                    if (chunkCount % 32 === 0) {
                         await new Promise(resolve => setTimeout(resolve, 0));
                     }
 
-                    const remaining = input.length - inputIndex;
-                    const toProcess = Math.min(chunkSize, remaining);
-                    
-                    // Put samples into SoundTouch
-                    for (let i = 0; i < toProcess; i++) {
-                        soundTouch.inputBuffer.put(input[inputIndex + i]);
+                    // Appliquer la fenêtre et faire l'overlap-add
+                    for (let i = 0; i < fftSize && outputIndex + i < newLength; i++) {
+                        const sample = input[inputIndex + i] || 0;
+                        const windowed = sample * hannWindow[i];
+                        output[outputIndex + i] = (output[outputIndex + i] || 0) + windowed;
                     }
 
-                    // Get processed samples
-                    let sample;
-                    while (soundTouch.outputBuffer.numSamples() > 0) {
-                        sample = soundTouch.outputBuffer.get();
-                        if (outputIndex < output.length) {
-                            output[outputIndex++] = sample;
-                        }
+                    outputIndex += hopSize;
+                    chunkCount++;
+                }
+
+                // Normalisation légère pour éviter le clipping
+                let maxVal = 0;
+                for (let i = 0; i < output.length; i++) {
+                    maxVal = Math.max(maxVal, Math.abs(output[i]));
+                }
+                if (maxVal > 1.0) {
+                    const scale = 0.95 / maxVal;
+                    for (let i = 0; i < output.length; i++) {
+                        output[i] *= scale;
                     }
-
-                    inputIndex += toProcess;
-                }
-
-                // Flush any remaining samples
-                soundTouch.flush();
-                let sample;
-                while (soundTouch.outputBuffer.numSamples() > 0) {
-                    sample = soundTouch.outputBuffer.get();
-                    if (outputIndex < output.length) {
-                        output[outputIndex++] = sample;
-                    }
-                }
-
-                // Normalize output
-                normalizeWithDynamicRange(output);
-
-            } catch (error) {
-                // Fallback to simple resampling if SoundTouch fails
-                console.warn('SoundTouch processing failed, using fallback:', error);
-                await resampleChannelFallback(input, output, tempo);
-            }
-        }
-
-        /**
-         * Fallback simple resampling if SoundTouch is not available
-         */
-        async function resampleChannelFallback(input, output, tempo) {
-            for (let outputPos = 0; outputPos < output.length; outputPos++) {
-                if (outputPos % 8192 === 0) {
-                    await new Promise(resolve => setTimeout(resolve, 0));
-                }
-
-                const mappedPos = outputPos * tempo;
-                const floorPos = Math.floor(mappedPos);
-                const frac = mappedPos - floorPos;
-
-                if (floorPos >= input.length - 1) {
-                    output[outputPos] = input[input.length - 1] || 0;
-                } else {
-                    const sample1 = input[floorPos] || 0;
-                    const sample2 = input[floorPos + 1] || 0;
-                    output[outputPos] = sample1 * (1 - frac) + sample2 * frac;
                 }
             }
 
-            normalizeWithDynamicRange(output);
+            return stretchedBuffer;
         }
 
         // Normalize audio while preserving dynamic range

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suno Tempo Boost - Batch (Improved Quality)</title>
+    <title>Suno Tempo Boost - Batch</title>
     <style>
         * {
             margin: 0;
@@ -18,7 +18,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 5px;
+            padding: 10px;
             overflow: hidden;
             position: relative;
         }
@@ -72,15 +72,15 @@
         
         .container {
             background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-            border-radius: 16px;
+            border-radius: 20px;
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3), 0 0 40px rgba(255, 107, 53, 0.1);
-            padding: 16px 14px;
-            max-width: 480px;
+            padding: 30px 25px;
+            max-width: 520px;
             width: 100%;
             animation: slideIn 0.5s ease-out;
             position: relative;
             z-index: 10;
-            max-height: 95vh;
+            max-height: 90vh;
             overflow-y: auto;
             transition: all 0.3s ease;
         }
@@ -106,8 +106,8 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 2px;
-            font-size: 28px;
+            margin-bottom: 4px;
+            font-size: 32px;
             font-weight: 700;
             animation: pulse 2s infinite;
         }
@@ -119,8 +119,8 @@
         
         .subtitle {
             color: #666;
-            margin-bottom: 10px;
-            font-size: 11px;
+            margin-bottom: 18px;
+            font-size: 12px;
             letter-spacing: 0.3px;
         }
 
@@ -128,24 +128,11 @@
             display: inline-block;
             background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
             color: white;
-            padding: 4px 10px;
-            border-radius: 16px;
-            font-size: 10px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
             font-weight: 600;
-            margin-bottom: 10px;
-            margin-right: 6px;
-            animation: fadeInScale 0.6s ease-out 0.1s both;
-        }
-
-        .badge-info {
-            display: inline-block;
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 4px 10px;
-            border-radius: 16px;
-            font-size: 9px;
-            font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 16px;
             animation: fadeInScale 0.6s ease-out 0.1s both;
         }
 
@@ -187,7 +174,7 @@
             border-radius: 8px;
             font-size: 12px;
             display: none;
-            max-height: 200px;
+            max-height: 100px;
             overflow-y: auto;
         }
 
@@ -195,72 +182,14 @@
             display: block;
         }
 
-        .file-list-header {
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
-
         .file-item {
-            padding: 8px;
+            padding: 4px 0;
             color: #555;
             border-bottom: 1px solid #FFE0CC;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .file-item:hover {
-            background: #fff5f0;
         }
 
         .file-item:last-child {
             border-bottom: none;
-            margin-bottom: 0;
-        }
-
-        .file-item-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .file-item-name {
-            font-weight: 600;
-            color: #333;
-            word-break: break-all;
-        }
-
-        .file-item-size {
-            font-size: 10px;
-            color: #999;
-        }
-
-        .file-item-remove {
-            background: none;
-            border: none;
-            color: #FF6B35;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 0;
-            margin-left: 10px;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-        }
-
-        .file-item-remove:hover {
-            color: #D84315;
-            transform: scale(1.2);
         }
 
         .tempo-control {
@@ -341,18 +270,18 @@
         
         .process-btn {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-weight: 700;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
             transition: all 0.3s ease;
             box-shadow: 0 8px 16px rgba(255, 107, 53, 0.2);
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
         
         .process-btn:hover:not(:disabled) {
@@ -619,57 +548,19 @@
         <h1>🎵 Tempo Boost</h1>
         <p class="subtitle">Batch process your music • Speed up multiple files</p>
         
-        <div>
-            <div class="badge">✨ Local Processing • No Upload</div>
-            <div class="badge-info">🎚️ Improved Quality Algorithm</div>
-        </div>
+        <div class="badge">✨ Local Processing • No Upload</div>
         
-        <input type="file" id="file" accept=".mp3" multiple>
-        <div class="file-list" id="fileList">
-            <div class="file-list-header" id="fileListHeader" style="display: none;">📁 Files to process:</div>
-            <div id="fileListItems"></div>
-        </div>
+        <input type="file" id="file" accept=".mp3" multiple required>
+        <div class="file-list" id="fileList"></div>
 
         <div class="tempo-control">
-            <label class="tempo-label">⚙️ Mode:</label>
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                    <input type="radio" name="tempo-mode" value="manual">
-                    <span>Playback Speed</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                    <input type="radio" name="tempo-mode" value="duration" checked>
-                    <span>Target Duration</span>
-                </label>
+            <label class="tempo-label">⚙️ Playback Speed:</label>
+            <div class="tempo-controls">
+                <button type="button" class="tempo-btn" id="minusBtn">−</button>
+                <div class="tempo-display" id="tempoDisplay">2.0x</div>
+                <button type="button" class="tempo-btn" id="plusBtn">+</button>
             </div>
-
-            <!-- Mode Manual: Playback Speed -->
-            <div id="manualMode" style="display: none;">
-                <label style="display: block; margin-bottom: 8px; color: #666; font-size: 12px;">Playback Speed:</label>
-                <div class="tempo-controls">
-                    <button type="button" class="tempo-btn" id="minusBtn">−</button>
-                    <div class="tempo-display" id="tempoDisplay">2.0x</div>
-                    <button type="button" class="tempo-btn" id="plusBtn">+</button>
-                </div>
-                <div class="tempo-range">0.25x to 4.0x</div>
-            </div>
-
-            <!-- Mode Duration: Target Duration -->
-            <div id="durationMode">
-                <label style="display: block; margin-bottom: 8px; color: #666; font-size: 12px;">Target Duration (MM:SS):</label>
-                <input type="text" id="targetDuration" placeholder="08:00" value="08:00" maxlength="5" style="
-                    width: 100%;
-                    padding: 10px;
-                    border: 2px solid #FF6B35;
-                    border-radius: 10px;
-                    font-size: 16px;
-                    text-align: center;
-                    font-weight: 600;
-                    color: #FF6B35;
-                ">
-                <div class="tempo-range" style="margin-top: 8px;">Original duration will be shown</div>
-            </div>
+            <div class="tempo-range">0.5x to 4.0x</div>
         </div>
 
         <button class="process-btn" id="processBtn">🚀 Process All Files</button>
@@ -699,15 +590,11 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- SoundTouchJS Components -->
-    <script src="https://unpkg.com/soundtouchjs@0.2.1/dist/filters/SimpleFilter.js"></script>
-    <script src="https://unpkg.com/soundtouchjs@0.2.1/dist/SoundTouch.js"></script>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let selectedFiles = [];
         let processedFiles = [];
         let tempoValue = 2.0;
-        let tempoMode = 'duration'; // 'manual' ou 'duration' - duration par défaut
 
         function formatDuration(seconds) {
             const hours = Math.floor(seconds / 3600);
@@ -722,43 +609,6 @@
                 return `${secs}s`;
             }
         }
-
-        // Parse MM:SS format to seconds
-        function parseTimeString(timeStr) {
-            const parts = timeStr.trim().split(':');
-            if (parts.length === 2) {
-                const minutes = parseInt(parts[0]);
-                const seconds = parseInt(parts[1]);
-                if (!isNaN(minutes) && !isNaN(seconds) && minutes >= 0 && seconds >= 0 && seconds < 60) {
-                    return minutes * 60 + seconds;
-                }
-            }
-            return null;
-        }
-
-        // Format seconds to MM:SS
-        function formatTimeString(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }
-
-        // Handle tempo mode toggle
-        document.querySelectorAll('input[name="tempo-mode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                tempoMode = e.target.value;
-                const manualMode = document.getElementById('manualMode');
-                const durationMode = document.getElementById('durationMode');
-                
-                if (tempoMode === 'manual') {
-                    manualMode.style.display = 'block';
-                    durationMode.style.display = 'none';
-                } else {
-                    manualMode.style.display = 'none';
-                    durationMode.style.display = 'block';
-                }
-            });
-        });
 
         function updateTempoDisplay() {
             document.getElementById('tempoDisplay').textContent = tempoValue.toFixed(1) + 'x';
@@ -775,127 +625,128 @@
 
         document.getElementById('minusBtn').addEventListener('click', (e) => {
             e.preventDefault();
-            if (tempoValue > 0.25) {
-                tempoValue = Math.max(0.25, tempoValue - 0.1);
+            if (tempoValue > 0.5) {
+                tempoValue = Math.max(0.5, tempoValue - 0.1);
                 tempoValue = Math.round(tempoValue * 10) / 10;
                 updateTempoDisplay();
             }
         });
 
-        // Auto-format duration input
-        document.getElementById('targetDuration').addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^\d:]/g, '');
-            
-            if (value.length > 5) {
-                value = value.substring(0, 5);
-            }
-            
-            if (value.length === 2 && !value.includes(':')) {
-                value = value + ':';
-            }
-            
-            e.target.value = value;
-        });
-
-        // Handle file selection from input - ADD files progressively
+        // Handle file selection from input
         document.getElementById('file').addEventListener('change', (e) => {
-            const newFiles = Array.from(e.target.files);
-            
-            // Ajouter les nouveaux fichiers à la liste existante
-            newFiles.forEach(file => {
-                // Vérifier si le fichier est déjà dans la liste
-                const isDuplicate = selectedFiles.some(f => f.name === file.name && f.size === file.size);
-                if (!isDuplicate) {
-                    selectedFiles.push(file);
-                }
-            });
-            
+            selectedFiles = Array.from(e.target.files);
             updateFileList();
-            
-            // Réinitialiser le file input pour permettre de sélectionner les mêmes fichiers à nouveau
-            e.target.value = '';
         });
 
-        // Drag & drop functionality
+        // Drag & drop functionality - écuter partout
         const container = document.querySelector('.container');
+        
+        console.log('🎯 Setup drag & drop...');
         
         function setupDragDrop(target) {
             target.addEventListener('dragover', (e) => {
+                console.log('🔄 dragover sur', target.tagName);
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.add('drag-active');
             });
 
             target.addEventListener('dragenter', (e) => {
+                console.log('➡️  dragenter sur', target.tagName);
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.add('drag-active');
             });
 
             target.addEventListener('dragleave', (e) => {
+                console.log('⬅️  dragleave sur', target.tagName);
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.remove('drag-active');
             });
 
             target.addEventListener('drop', (e) => {
+                console.log('💧 DROP EVENT SUR', target.tagName || 'NO_TAG');
+                console.log('=== DATATRANSFER COMPLETE ===');
+                console.log('  effectAllowed:', e.dataTransfer.effectAllowed);
+                console.log('  dropEffect:', e.dataTransfer.dropEffect);
+                console.log('  types:', e.dataTransfer.types);
+                console.log('  types length:', e.dataTransfer.types.length);
+                
+                // Essayer d'accéder à toutes les propriétés
+                console.log('=== Toutes les propriétés de dataTransfer ===');
+                for (let prop in e.dataTransfer) {
+                    try {
+                        console.log(`  ${prop}:`, e.dataTransfer[prop]);
+                    } catch (err) {
+                        console.log(`  ${prop}: [ERROR: ${err.message}]`);
+                    }
+                }
+                
+                console.log('=== e.dataTransfer.files ===');
+                console.log('  files:', e.dataTransfer.files);
+                console.log('  files.length:', e.dataTransfer.files.length);
+                
+                console.log('=== e.dataTransfer.items ===');
+                console.log('  items:', e.dataTransfer.items);
+                if (e.dataTransfer.items) {
+                    console.log('  items.length:', e.dataTransfer.items.length);
+                }
+                
                 e.preventDefault();
                 e.stopPropagation();
                 container.classList.remove('drag-active');
                 
                 const files = e.dataTransfer.files;
+                console.log('📂 Fichiers droppés:', files.length);
+                
+                if (files.length === 0) {
+                    console.error('⚠️  dataTransfer.files est VIDE!');
+                    showError('No files detected. Try dragging from File Explorer (not another browser tab or app).');
+                    return;
+                }
+                
+                Array.from(files).forEach((f, idx) => {
+                    console.log(`  Fichier ${idx + 1}:`, {
+                        name: f.name,
+                        type: f.type,
+                        size: f.size
+                    });
+                });
+                
                 const mp3Files = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.mp3'));
+                
+                console.log(`✅ MP3 files trouvés: ${mp3Files.length}/${files.length}`);
                 
                 if (mp3Files.length > 0) {
                     selectedFiles = mp3Files;
                     updateFileList();
-                } else if (files.length > 0) {
+                } else {
                     showError('Please drop MP3 files only');
                 }
             });
         }
 
-        // Listen on document, window and container
+        // Écouter sur document, window et container
         setupDragDrop(document);
         setupDragDrop(window);
         setupDragDrop(container);
 
         function updateFileList() {
-            const fileListContainer = document.getElementById('fileList');
-            const fileListItems = document.getElementById('fileListItems');
-            const fileListHeader = document.getElementById('fileListHeader');
+            const fileList = document.getElementById('fileList');
             
             if (selectedFiles.length > 0) {
-                fileListHeader.style.display = 'block';
-                let html = '';
-                
-                selectedFiles.forEach((f, idx) => {
+                let html = `<strong>${selectedFiles.length} file(s) selected:</strong><br>`;
+                selectedFiles.forEach(f => {
                     const mb = (f.size / 1024 / 1024).toFixed(2);
-                    html += `
-                        <div class="file-item">
-                            <div class="file-item-info">
-                                <div class="file-item-name">📄 ${f.name}</div>
-                                <div class="file-item-size">${mb} MB</div>
-                            </div>
-                            <button type="button" class="file-item-remove" onclick="removeFile(${idx})" title="Remove file">✕</button>
-                        </div>
-                    `;
+                    html += `<div class="file-item">📄 ${f.name} (${mb} MB)</div>`;
                 });
-                
-                fileListItems.innerHTML = html;
-                fileListContainer.classList.add('show');
+                fileList.innerHTML = html;
+                fileList.classList.add('show');
             } else {
-                fileListHeader.style.display = 'none';
-                fileListItems.innerHTML = '';
-                fileListContainer.classList.remove('show');
+                fileList.classList.remove('show');
             }
         }
-
-        // Fonction pour supprimer un fichier de la liste
-        window.removeFile = function(idx) {
-            selectedFiles.splice(idx, 1);
-            updateFileList();
-        };
 
         document.getElementById('processBtn').addEventListener('click', async () => {
             if (selectedFiles.length === 0) {
@@ -903,23 +754,7 @@
                 return;
             }
 
-            // Calcul du tempo selon le mode
-            let tempo = tempoValue;
-            
-            if (tempoMode === 'duration') {
-                const targetDurationStr = document.getElementById('targetDuration').value;
-                const targetSeconds = parseTimeString(targetDurationStr);
-                
-                if (!targetSeconds) {
-                    showError('Invalid duration format. Use MM:SS (e.g., 08:00)');
-                    return;
-                }
-
-                // On va calculer le tempo une fois qu'on a la durée du premier fichier
-                // Pour l'instant, on va le faire fichier par fichier
-                tempo = null; // Signal pour calculer dynamiquement
-            }
-
+            const tempo = tempoValue;
             processedFiles = [];
 
             try {
@@ -942,31 +777,14 @@
                         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
                         const originalDuration = audioBuffer.duration;
 
-                        // Calculer le tempo si mode duration
-                        let actualTempo = tempo;
-                        if (tempo === null) {
-                            const targetDurationStr = document.getElementById('targetDuration').value;
-                            const targetSeconds = parseTimeString(targetDurationStr);
-                            actualTempo = originalDuration / targetSeconds;
-                        }
-
                         setProgress((i + 0.3) / totalFiles * 100, `Time-stretching ${file.name}...`);
-                        const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, actualTempo);
+                        const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, tempo);
 
                         setProgress((i + 0.7) / totalFiles * 100, `Encoding MP3 320kbps...`);
                         const blob = await encodeToMP3(stretchedBuffer);
 
                         const durationStr = formatDuration(originalDuration);
-                        const newDurationStr = formatDuration(stretchedBuffer.duration);
-                        
-                        // Mode duration: afficher le nouveau nom avec durée cible
-                        let outputName;
-                        if (tempoMode === 'duration') {
-                            outputName = file.name.replace('.mp3', `_${durationStr}_to_${newDurationStr}.mp3`);
-                        } else {
-                            outputName = file.name.replace('.mp3', `_x${actualTempo.toFixed(2)}.mp3`).replace(/^/, `${durationStr}_`);
-                        }
-                        
+                        const outputName = file.name.replace('.mp3', `_${durationStr}_x${tempo}.mp3`);
                         const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
                         processedFiles.push({
@@ -975,7 +793,7 @@
                             originalDuration: originalDuration,
                             newDuration: stretchedBuffer.duration,
                             sizeMB: sizeMB,
-                            tempo: actualTempo
+                            tempo: tempo
                         });
 
                         setProgress(((i + 1) / totalFiles) * 100, `Complete!`);
@@ -1097,86 +915,22 @@
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
 
-                // Paramètres optimisés (juste améliorés par rapport à l'original)
-                const fftSize = 2048;  // Un peu plus grand pour meilleure qualité
+                const fftSize = 4096;
                 const hopSize = fftSize / 4;
                 const stride = Math.round(hopSize * tempo);
 
-                // Pré-calculer la fenêtre Hann
-                const hannWindow = new Float32Array(fftSize);
-                for (let i = 0; i < fftSize; i++) {
-                    hannWindow[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
-                }
-
                 let outputIndex = 0;
-                let chunkCount = 0;
-
                 for (let inputIndex = 0; inputIndex < originalLength - fftSize; inputIndex += stride) {
-                    // Yield tous les 32 chunks pour pas bloquer l'UI
-                    if (chunkCount % 32 === 0) {
-                        await new Promise(resolve => setTimeout(resolve, 0));
-                    }
-
-                    // Appliquer la fenêtre et faire l'overlap-add
                     for (let i = 0; i < fftSize && outputIndex + i < newLength; i++) {
+                        const hann = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
                         const sample = input[inputIndex + i] || 0;
-                        const windowed = sample * hannWindow[i];
-                        output[outputIndex + i] = (output[outputIndex + i] || 0) + windowed;
+                        output[outputIndex + i] = (output[outputIndex + i] || 0) + sample * hann;
                     }
-
                     outputIndex += hopSize;
-                    chunkCount++;
-                }
-
-                // Normalisation légère pour éviter le clipping
-                let maxVal = 0;
-                for (let i = 0; i < output.length; i++) {
-                    maxVal = Math.max(maxVal, Math.abs(output[i]));
-                }
-                if (maxVal > 1.0) {
-                    const scale = 0.95 / maxVal;
-                    for (let i = 0; i < output.length; i++) {
-                        output[i] *= scale;
-                    }
                 }
             }
 
             return stretchedBuffer;
-        }
-
-        // Normalize audio while preserving dynamic range
-        function normalizeWithDynamicRange(output) {
-            let maxAmplitude = 0;
-            let rmsEnergy = 0;
-
-            // Find peak and RMS
-            for (let i = 0; i < output.length; i++) {
-                const val = Math.abs(output[i]);
-                maxAmplitude = Math.max(maxAmplitude, val);
-                rmsEnergy += output[i] * output[i];
-            }
-
-            rmsEnergy = Math.sqrt(rmsEnergy / output.length);
-
-            // Only normalize if clipping risk
-            if (maxAmplitude > 1.0) {
-                const scale = 0.99 / maxAmplitude;
-                for (let i = 0; i < output.length; i++) {
-                    output[i] *= scale;
-                }
-            }
-
-            // Light compression to avoid peaks without destroying dynamics
-            const compressionRatio = 0.98;
-            const threshold = 0.85;
-            
-            for (let i = 0; i < output.length; i++) {
-                const val = Math.abs(output[i]);
-                if (val > threshold) {
-                    const excess = val - threshold;
-                    output[i] *= 1 - (excess * (1 - compressionRatio) / val);
-                }
-            }
         }
 
         async function encodeToMP3(audioBuffer) {

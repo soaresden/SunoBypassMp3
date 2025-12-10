@@ -806,7 +806,7 @@
                     const blob = await encodeToMP3(stretchedBuffer);
 
                     processedFiles.push({
-                        name: `${formatDuration(stretchedBuffer.duration)}_${file.name.replace('.mp3', '')}_x${tempo}.mp3`,
+                        name: `${formatDuration(audioBuffer.duration)}_${file.name.replace('.mp3', '')}_x${tempo}.mp3`,
                         originalName: file.name,
                         blob: blob,
                         duration: audioBuffer.duration,

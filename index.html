@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suno Tempo Boost - Batch</title>
+    <title>Suno Tempo Boost</title>
     <style>
         * {
             margin: 0;
@@ -12,234 +12,147 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             min-height: 100vh;
+            color: #333;
+        }
+
+        .app-container {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
+            color: white;
+            padding: 16px 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            flex: 1;
+            display: flex;
             overflow: hidden;
-            position: relative;
+            gap: 0;
         }
 
-        /* Musical floating animations */
-        .floating-notes {
-            position: fixed;
-            top: -50px;
+        /* LEFT PANEL - CONTROLS */
+        .controls-panel {
             width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 1;
-        }
-
-        .note {
-            position: absolute;
-            font-size: 40px;
-            opacity: 0.1;
-            animation: float 8s infinite;
-        }
-
-        .note:nth-child(1) { left: 5%; animation: float 8s infinite ease-in-out; }
-        .note:nth-child(2) { left: 10%; animation: float 9s infinite ease-in-out 1s; }
-        .note:nth-child(3) { left: 20%; animation: float 7s infinite ease-in-out 0.5s; }
-        .note:nth-child(4) { left: 30%; animation: float 10s infinite ease-in-out 1.5s; }
-        .note:nth-child(5) { left: 40%; animation: float 8s infinite ease-in-out 0.8s; }
-        .note:nth-child(6) { left: 50%; animation: float 9s infinite ease-in-out 1.2s; }
-        .note:nth-child(7) { left: 60%; animation: float 7s infinite ease-in-out 0.3s; }
-        .note:nth-child(8) { left: 70%; animation: float 10s infinite ease-in-out 1.8s; }
-        .note:nth-child(9) { left: 80%; animation: float 8s infinite ease-in-out 0.6s; }
-        .note:nth-child(10) { left: 90%; animation: float 9s infinite ease-in-out 1.1s; }
-
-        @keyframes float {
-            0% {
-                bottom: -50px;
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.1;
-            }
-            90% {
-                opacity: 0.1;
-            }
-            100% {
-                bottom: 100vh;
-                opacity: 0;
-                transform: translateX(100px) rotate(360deg);
-            }
-        }
-        
-        .container {
-            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-            border-radius: 20px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3), 0 0 40px rgba(255, 107, 53, 0.1);
-            padding: 30px 25px;
-            max-width: 520px;
-            width: 100%;
-            animation: slideIn 0.5s ease-out;
-            position: relative;
-            z-index: 10;
-            max-height: 90vh;
+            background: white;
             overflow-y: auto;
-            transition: all 0.3s ease;
+            padding: 20px;
+            border-right: 1px solid #eee;
         }
 
-        .container.drag-active {
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3), 0 0 60px rgba(255, 107, 53, 0.3);
+        /* RIGHT PANEL - PLAYLIST (hidden on mobile) */
+        .playlist-panel {
+            width: 280px;
+            background: #f9f9f9;
+            overflow-y: auto;
+            border-left: 1px solid #eee;
+            display: none;
+        }
+
+        /* SECTION */
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.7;
+        }
+
+        /* FILE INPUT */
+        .file-input-area {
+            border: 2px dashed #FF6B35;
+            border-radius: 12px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
+        }
+
+        .file-input-area:hover {
+            background: linear-gradient(135deg, #ffe8dd 0%, #fff0e8 100%);
+            border-color: #FF9F1C;
+        }
+
+        .file-input-area.drag-active {
+            background: #ffe0cc;
+            border-color: #FF9F1C;
             transform: scale(1.02);
         }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        h1 {
-            background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 4px;
-            font-size: 32px;
-            font-weight: 700;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
-        
-        .subtitle {
-            color: #666;
-            margin-bottom: 18px;
-            font-size: 12px;
-            letter-spacing: 0.3px;
-        }
-
-        .badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            animation: fadeInScale 0.6s ease-out 0.1s both;
-        }
-
-        @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        
-        input[type="file"] {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            border: 2px dashed #FF6B35;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
-            margin-bottom: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 13px;
-        }
-        
-        input[type="file"]:hover {
-            background: linear-gradient(135deg, #ffe8dd 0%, #fff0e8 100%);
-            border-color: #FF9F1C;
-            transform: translateY(-1px);
-        }
-
-        .file-list {
-            margin: 12px 0;
-            padding: 12px;
-            background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
-            border-left: 4px solid #FF6B35;
-            border-radius: 8px;
-            font-size: 12px;
-            display: none;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-
-        .file-list.show {
-            display: block;
-        }
-
-        .file-item {
-            padding: 4px 0;
-            color: #555;
-            border-bottom: 1px solid #FFE0CC;
-        }
-
-        .file-item:last-child {
-            border-bottom: none;
-        }
-
-        .tempo-control {
-            margin: 18px 0;
-            padding: 18px;
-            background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
-            border-radius: 14px;
-            border: 2px solid #FFE0CC;
-            animation: fadeInScale 0.6s ease-out 0.2s both;
-        }
-
-        .tempo-label {
-            display: block;
-            margin-bottom: 12px;
-            color: #333;
-            font-weight: 700;
+        .file-input-area p {
             font-size: 14px;
-            letter-spacing: 0.5px;
+            color: #666;
+            margin: 0;
+        }
+
+        .file-input-area .icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* TEMPO CONTROL */
+        .tempo-control {
+            background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
+            border-radius: 12px;
+            padding: 16px;
+            border: 2px solid #FFE0CC;
         }
 
         .tempo-controls {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .tempo-btn {
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border: none;
             background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
             color: white;
-            border-radius: 10px;
-            font-size: 22px;
-            font-weight: bold;
+            border-radius: 8px;
+            font-size: 20px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
         }
 
         .tempo-btn:hover:not(:disabled) {
-            transform: scale(1.08);
-            box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
-        }
-
-        .tempo-btn:active:not(:disabled) {
-            transform: scale(0.96);
+            transform: scale(1.1);
         }
 
         .tempo-btn:disabled {
@@ -252,133 +165,187 @@
             text-align: center;
             padding: 12px;
             background: white;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 28px;
             font-weight: 700;
             color: #FF6B35;
             border: 2px solid #FF6B35;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
-        .tempo-range {
-            font-size: 10px;
-            color: #999;
-            text-align: center;
-            margin-top: 8px;
-            letter-spacing: 0.2px;
-        }
-        
+        /* PROCESS BUTTON */
         .process-btn {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 700;
+            font-size: 16px;
             cursor: pointer;
-            font-size: 15px;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 16px rgba(255, 107, 53, 0.2);
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-        }
-        
-        .process-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(255, 107, 53, 0.3);
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
         }
 
-        .process-btn:active:not(:disabled) {
-            transform: translateY(-1px);
+        .process-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(255, 107, 53, 0.3);
         }
-        
+
         .process-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        
-        .progress-container {
-            margin: 18px 0;
-            display: none;
-            animation: fadeInScale 0.4s ease-out;
+
+        /* PLAYLIST */
+        .playlist-header {
+            padding: 16px;
+            background: white;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            font-weight: 700;
+            color: #333;
         }
-        
-        .progress-container.show {
+
+        .playlist-count {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .playlist-items {
+            padding: 8px;
+        }
+
+        .playlist-item {
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #FF6B35;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .playlist-item:hover {
+            background: #fff8f5;
+            transform: translateX(4px);
+        }
+
+        .playlist-item.processing {
+            background: #fff0e0;
+            border-left-color: #FF9F1C;
+        }
+
+        .playlist-item.done {
+            border-left-color: #4CAF50;
+        }
+
+        .playlist-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .playlist-item-remove {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 8px;
+            transition: color 0.2s;
+        }
+
+        .playlist-item-remove:hover {
+            color: #FF6B35;
+        }
+
+        /* PROGRESS */
+        .progress-section {
+            background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
+            border-radius: 12px;
+            padding: 16px;
+            border: 2px solid #FFE0CC;
+            display: none;
+        }
+
+        .progress-section.show {
             display: block;
         }
 
         .progress-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             font-size: 12px;
+            font-weight: 600;
         }
 
         .progress-status {
-            font-weight: 600;
             color: #FF6B35;
-            letter-spacing: 0.3px;
         }
 
-        .progress-percentage {
+        .progress-percent {
             color: #999;
-            font-weight: 600;
         }
-        
+
         .progress-bar {
             width: 100%;
-            height: 6px;
+            height: 8px;
             background: #FFE0CC;
             border-radius: 10px;
             overflow: hidden;
             margin-bottom: 12px;
         }
-        
+
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #FF6B35 0%, #FF9F1C 100%);
             width: 0%;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.4s;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
         }
 
-        .file-progress {
+        .progress-details {
             font-size: 11px;
-            color: #555;
-            margin-bottom: 8px;
+            color: #666;
+            line-height: 1.6;
         }
 
-        .result {
-            display: none;
-            margin-top: 18px;
-            padding: 16px;
+        /* RESULTS */
+        .results-section {
             background: linear-gradient(135deg, #fff8f5 0%, #fffbf8 100%);
+            border-radius: 12px;
+            padding: 16px;
             border: 2px solid #FF6B35;
-            border-radius: 14px;
-            animation: slideIn 0.4s ease-out;
+            display: none;
         }
 
-        .result.show {
+        .results-section.show {
             display: block;
         }
 
-        .result h3 {
+        .results-header {
+            font-size: 14px;
+            font-weight: 700;
             color: #FF6B35;
             margin-bottom: 12px;
-            font-size: 15px;
-            letter-spacing: 0.3px;
         }
 
         .results-list {
             max-height: 300px;
             overflow-y: auto;
-            margin-bottom: 12px;
         }
 
         .result-item {
-            padding: 10px;
+            padding: 12px;
             background: white;
             border-radius: 8px;
             margin-bottom: 8px;
@@ -387,8 +354,8 @@
         }
 
         .result-item-name {
-            color: #333;
             font-weight: 600;
+            color: #333;
             margin-bottom: 4px;
             word-break: break-all;
         }
@@ -396,25 +363,24 @@
         .result-item-info {
             color: #666;
             font-size: 10px;
+            line-height: 1.5;
         }
 
-        .result-item-btn {
-            margin-top: 6px;
-        }
-
-        .download-individual {
+        .download-btn {
             width: 100%;
             padding: 8px;
+            margin-top: 8px;
             background: #FF6B35;
             color: white;
             border: none;
             border-radius: 6px;
             font-size: 11px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .download-individual:hover {
+        .download-btn:hover {
             background: #FF9F1C;
         }
 
@@ -427,21 +393,21 @@
         .button-group button {
             flex: 1;
             padding: 10px;
-            font-size: 14px;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             font-weight: 600;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .download-zip {
+        .download-all {
             background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
             color: white;
         }
 
-        .download-zip:hover {
-            box-shadow: 0 8px 16px rgba(255, 107, 53, 0.3);
+        .download-all:hover {
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
         }
 
         .reset-btn {
@@ -453,148 +419,190 @@
             background: #777;
         }
 
-        .error {
+        /* ERROR */
+        .error-msg {
             background: #FFE0E0;
             border: 2px solid #FF3333;
-            border-radius: 10px;
-            padding: 12px;
             color: #D32F2F;
-            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
             font-size: 12px;
+            margin-bottom: 16px;
             display: none;
-            animation: slideIn 0.3s ease-out;
         }
 
-        .error.show {
+        .error-msg.show {
             display: block;
         }
 
-        /* Mobile responsive */
-        @media (max-width: 480px) {
-            .container {
-                padding: 20px 18px;
-                border-radius: 16px;
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .main {
+                flex-direction: column;
             }
 
-            h1 {
-                font-size: 28px;
-                margin-bottom: 2px;
+            .controls-panel {
+                flex: 1;
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #eee;
+                overflow-y: auto;
             }
 
-            .subtitle {
-                font-size: 11px;
-                margin-bottom: 12px;
+            .playlist-panel {
+                width: 100%;
+                height: 200px;
+                border-left: none;
+                border-top: 1px solid #eee;
+                display: block;
             }
 
-            input[type="file"] {
-                padding: 10px;
-                margin-bottom: 10px;
-                font-size: 12px;
+            .section {
+                margin-bottom: 16px;
             }
 
-            .tempo-control {
-                margin: 12px 0;
-                padding: 14px;
+            .tempo-controls {
+                gap: 8px;
             }
 
             .tempo-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
             }
 
             .tempo-display {
                 font-size: 24px;
-                padding: 10px;
+            }
+
+            .file-input-area {
+                padding: 20px 16px;
+            }
+
+            .file-input-area .icon {
+                font-size: 28px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 12px 16px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .controls-panel {
+                padding: 16px;
+            }
+
+            .section {
+                margin-bottom: 12px;
+            }
+
+            .tempo-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+            }
+
+            .tempo-display {
+                font-size: 20px;
             }
 
             .process-btn {
-                padding: 10px;
+                padding: 12px;
                 font-size: 14px;
-                margin-bottom: 10px;
-            }
-
-            .button-group {
-                gap: 6px;
-                margin-top: 10px;
-            }
-
-            .button-group button {
-                padding: 8px;
-                font-size: 12px;
-            }
-
-            .note {
-                font-size: 30px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="floating-notes">
-        <div class="note">🎵</div>
-        <div class="note">🎶</div>
-        <div class="note">🎸</div>
-        <div class="note">🎹</div>
-        <div class="note">🎤</div>
-        <div class="note">🥁</div>
-        <div class="note">🎺</div>
-        <div class="note">🎻</div>
-        <div class="note">🎼</div>
-        <div class="note">🎧</div>
-    </div>
-
-    <div class="container">
-        <h1>🎵 Tempo Boost</h1>
-        <p class="subtitle">Batch process your music • Speed up multiple files</p>
-        
-        <div class="badge">✨ Local Processing • No Upload</div>
-        
-        <input type="file" id="file" accept=".mp3" multiple required>
-        <div class="file-list" id="fileList"></div>
-
-        <div class="tempo-control">
-            <label class="tempo-label">⚙️ Playback Speed:</label>
-            <div class="tempo-controls">
-                <button type="button" class="tempo-btn" id="minusBtn">−</button>
-                <div class="tempo-display" id="tempoDisplay">2.0x</div>
-                <button type="button" class="tempo-btn" id="plusBtn">+</button>
-            </div>
-            <div class="tempo-range">0.5x to 4.0x</div>
+    <div class="app-container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🎵 Suno Tempo Boost</h1>
+            <p>Batch speed up your music • Local processing</p>
         </div>
 
-        <button class="process-btn" id="processBtn">🚀 Process All Files</button>
+        <!-- MAIN -->
+        <div class="main">
+            <!-- LEFT: CONTROLS -->
+            <div class="controls-panel">
+                <div class="error-msg" id="error"></div>
 
-        <div class="progress-container" id="progress">
-            <div class="progress-header">
-                <div class="progress-status" id="status">Preparing...</div>
-                <div class="progress-percentage" id="percent">0%</div>
+                <!-- FILE INPUT -->
+                <div class="section">
+                    <div class="file-input-area" id="dropZone">
+                        <div class="icon">📁</div>
+                        <p><strong>Drop MP3 files here</strong></p>
+                        <p style="font-size: 11px; margin-top: 4px; opacity: 0.7;">or click to browse</p>
+                    </div>
+                    <input type="file" id="fileInput" accept=".mp3" multiple>
+                </div>
+
+                <!-- TEMPO CONTROL -->
+                <div class="section">
+                    <div class="section-title">⚙️ Playback Speed</div>
+                    <div class="tempo-control">
+                        <div class="tempo-controls">
+                            <button type="button" class="tempo-btn" id="minusBtn">−</button>
+                            <div class="tempo-display" id="tempoDisplay">2.0x</div>
+                            <button type="button" class="tempo-btn" id="plusBtn">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROCESS BUTTON -->
+                <div class="section">
+                    <button class="process-btn" id="processBtn">🚀 Process Playlist</button>
+                </div>
+
+                <!-- PROGRESS -->
+                <div class="progress-section" id="progress">
+                    <div class="progress-header">
+                        <span class="progress-status" id="status">Processing...</span>
+                        <span class="progress-percent" id="percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="fill"></div>
+                    </div>
+                    <div class="progress-details" id="details">
+                        Waiting to start...
+                    </div>
+                </div>
+
+                <!-- RESULTS -->
+                <div class="results-section" id="results">
+                    <div class="results-header">✅ All processed!</div>
+                    <div class="results-list" id="resultsList"></div>
+                    <div class="button-group">
+                        <button class="download-all" id="downloadZipBtn">📦 Download All</button>
+                        <button class="reset-btn" onclick="location.reload()">🔄 Reset</button>
+                    </div>
+                </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="fill"></div>
+
+            <!-- RIGHT: PLAYLIST -->
+            <div class="playlist-panel">
+                <div class="playlist-header">
+                    📋 Playlist
+                    <div class="playlist-count" id="playlistCount">0 files</div>
+                </div>
+                <div class="playlist-items" id="playlistItems"></div>
             </div>
-            <div class="file-progress" id="fileProgress">File 1 of 1</div>
         </div>
-
-        <div class="result" id="result">
-            <h3>✅ All files processed!</h3>
-            <div class="results-list" id="resultsList"></div>
-            <div class="button-group">
-                <button class="download-zip" id="downloadZipBtn">📦 Download ZIP</button>
-                <button class="reset-btn" onclick="location.reload()">🔄 New Batch</button>
-            </div>
-        </div>
-
-        <div class="error" id="error"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        let selectedFiles = [];
+        let playlist = [];
         let processedFiles = [];
         let tempoValue = 2.0;
+        let isProcessing = false;
 
         function formatDuration(seconds) {
             const hours = Math.floor(seconds / 3600);
@@ -610,12 +618,77 @@
             }
         }
 
+        // FILE INPUT
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+            dropZone.addEventListener(event, preventDefaults);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(event => {
+            dropZone.addEventListener(event, () => {
+                dropZone.classList.add('drag-active');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(event => {
+            dropZone.addEventListener(event, () => {
+                dropZone.classList.remove('drag-active');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.mp3'));
+            addToPlaylist(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            addToPlaylist(Array.from(e.target.files));
+        });
+
+        function addToPlaylist(files) {
+            files.forEach(file => {
+                const exists = playlist.some(f => f.name === file.name && f.size === file.size);
+                if (!exists) {
+                    playlist.push(file);
+                }
+            });
+            updatePlaylistUI();
+        }
+
+        function updatePlaylistUI() {
+            const count = document.getElementById('playlistCount');
+            const items = document.getElementById('playlistItems');
+            
+            count.textContent = `${playlist.length} file${playlist.length !== 1 ? 's' : ''}`;
+
+            items.innerHTML = playlist.map((file, idx) => `
+                <div class="playlist-item" id="item-${idx}">
+                    <span class="playlist-item-name">${file.name}</span>
+                    <button class="playlist-item-remove" onclick="removeFromPlaylist(${idx})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        window.removeFromPlaylist = function(idx) {
+            playlist.splice(idx, 1);
+            updatePlaylistUI();
+        };
+
+        // TEMPO CONTROL
         function updateTempoDisplay() {
             document.getElementById('tempoDisplay').textContent = tempoValue.toFixed(1) + 'x';
         }
 
-        document.getElementById('plusBtn').addEventListener('click', (e) => {
-            e.preventDefault();
+        document.getElementById('plusBtn').addEventListener('click', () => {
             if (tempoValue < 4) {
                 tempoValue = Math.min(4, tempoValue + 0.1);
                 tempoValue = Math.round(tempoValue * 10) / 10;
@@ -623,8 +696,7 @@
             }
         });
 
-        document.getElementById('minusBtn').addEventListener('click', (e) => {
-            e.preventDefault();
+        document.getElementById('minusBtn').addEventListener('click', () => {
             if (tempoValue > 0.5) {
                 tempoValue = Math.max(0.5, tempoValue - 0.1);
                 tempoValue = Math.round(tempoValue * 10) / 10;
@@ -632,196 +704,97 @@
             }
         });
 
-        // Handle file selection from input
-        document.getElementById('file').addEventListener('change', (e) => {
-            selectedFiles = Array.from(e.target.files);
-            updateFileList();
-        });
-
-        // Drag & drop functionality - écuter partout
-        const container = document.querySelector('.container');
-        
-        console.log('🎯 Setup drag & drop...');
-        
-        function setupDragDrop(target) {
-            target.addEventListener('dragover', (e) => {
-                console.log('🔄 dragover sur', target.tagName);
-                e.preventDefault();
-                e.stopPropagation();
-                container.classList.add('drag-active');
-            });
-
-            target.addEventListener('dragenter', (e) => {
-                console.log('➡️  dragenter sur', target.tagName);
-                e.preventDefault();
-                e.stopPropagation();
-                container.classList.add('drag-active');
-            });
-
-            target.addEventListener('dragleave', (e) => {
-                console.log('⬅️  dragleave sur', target.tagName);
-                e.preventDefault();
-                e.stopPropagation();
-                container.classList.remove('drag-active');
-            });
-
-            target.addEventListener('drop', (e) => {
-                console.log('💧 DROP EVENT SUR', target.tagName || 'NO_TAG');
-                console.log('=== DATATRANSFER COMPLETE ===');
-                console.log('  effectAllowed:', e.dataTransfer.effectAllowed);
-                console.log('  dropEffect:', e.dataTransfer.dropEffect);
-                console.log('  types:', e.dataTransfer.types);
-                console.log('  types length:', e.dataTransfer.types.length);
-                
-                // Essayer d'accéder à toutes les propriétés
-                console.log('=== Toutes les propriétés de dataTransfer ===');
-                for (let prop in e.dataTransfer) {
-                    try {
-                        console.log(`  ${prop}:`, e.dataTransfer[prop]);
-                    } catch (err) {
-                        console.log(`  ${prop}: [ERROR: ${err.message}]`);
-                    }
-                }
-                
-                console.log('=== e.dataTransfer.files ===');
-                console.log('  files:', e.dataTransfer.files);
-                console.log('  files.length:', e.dataTransfer.files.length);
-                
-                console.log('=== e.dataTransfer.items ===');
-                console.log('  items:', e.dataTransfer.items);
-                if (e.dataTransfer.items) {
-                    console.log('  items.length:', e.dataTransfer.items.length);
-                }
-                
-                e.preventDefault();
-                e.stopPropagation();
-                container.classList.remove('drag-active');
-                
-                const files = e.dataTransfer.files;
-                console.log('📂 Fichiers droppés:', files.length);
-                
-                if (files.length === 0) {
-                    console.error('⚠️  dataTransfer.files est VIDE!');
-                    showError('No files detected. Try dragging from File Explorer (not another browser tab or app).');
-                    return;
-                }
-                
-                Array.from(files).forEach((f, idx) => {
-                    console.log(`  Fichier ${idx + 1}:`, {
-                        name: f.name,
-                        type: f.type,
-                        size: f.size
-                    });
-                });
-                
-                const mp3Files = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.mp3'));
-                
-                console.log(`✅ MP3 files trouvés: ${mp3Files.length}/${files.length}`);
-                
-                if (mp3Files.length > 0) {
-                    selectedFiles = mp3Files;
-                    updateFileList();
-                } else {
-                    showError('Please drop MP3 files only');
-                }
-            });
-        }
-
-        // Écouter sur document, window et container
-        setupDragDrop(document);
-        setupDragDrop(window);
-        setupDragDrop(container);
-
-        function updateFileList() {
-            const fileList = document.getElementById('fileList');
-            
-            if (selectedFiles.length > 0) {
-                let html = `<strong>${selectedFiles.length} file(s) selected:</strong><br>`;
-                selectedFiles.forEach(f => {
-                    const mb = (f.size / 1024 / 1024).toFixed(2);
-                    html += `<div class="file-item">📄 ${f.name} (${mb} MB)</div>`;
-                });
-                fileList.innerHTML = html;
-                fileList.classList.add('show');
-            } else {
-                fileList.classList.remove('show');
-            }
-        }
-
+        // PROCESS
         document.getElementById('processBtn').addEventListener('click', async () => {
-            if (selectedFiles.length === 0) {
-                showError('Please select MP3 files');
+            if (playlist.length === 0) {
+                showError('Add MP3 files to the playlist first');
                 return;
             }
 
-            const tempo = tempoValue;
+            if (isProcessing) return;
+            isProcessing = true;
+
             processedFiles = [];
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('progress').classList.add('show');
+            document.getElementById('processBtn').disabled = true;
 
-            try {
-                document.getElementById('error').classList.remove('show');
-                document.getElementById('result').classList.remove('show');
-                document.getElementById('progress').classList.add('show');
-                document.getElementById('processBtn').disabled = true;
-                document.getElementById('file').disabled = true;
+            const tempo = tempoValue;
+            const totalFiles = playlist.length;
 
-                for (let i = 0; i < selectedFiles.length; i++) {
-                    const file = selectedFiles[i];
-                    const fileNum = i + 1;
-                    const totalFiles = selectedFiles.length;
+            for (let i = 0; i < totalFiles; i++) {
+                const file = playlist[i];
+                updatePlaylistItemStatus(i, 'processing');
 
-                    try {
-                        document.getElementById('fileProgress').textContent = `Processing: ${file.name} (${fileNum}/${totalFiles})`;
-                        setProgress((i / totalFiles) * 100, `Decoding ${file.name}...`);
+                try {
+                    setProgress(
+                        (i / totalFiles) * 100,
+                        `Decoding: ${file.name}`,
+                        `File ${i + 1}/${totalFiles}`
+                    );
 
-                        const arrayBuffer = await file.arrayBuffer();
-                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                        const originalDuration = audioBuffer.duration;
+                    const arrayBuffer = await file.arrayBuffer();
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-                        setProgress((i + 0.3) / totalFiles * 100, `Time-stretching ${file.name}...`);
-                        const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, tempo);
+                    setProgress(
+                        (i + 0.3) / totalFiles * 100,
+                        `Time-stretching: ${file.name}`,
+                        `File ${i + 1}/${totalFiles}`
+                    );
 
-                        setProgress((i + 0.7) / totalFiles * 100, `Encoding MP3 320kbps...`);
-                        const blob = await encodeToMP3(stretchedBuffer);
+                    const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, tempo);
 
-                        const durationStr = formatDuration(originalDuration);
-                        const outputName = file.name.replace('.mp3', `_${durationStr}_x${tempo}.mp3`);
-                        const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+                    setProgress(
+                        (i + 0.7) / totalFiles * 100,
+                        `Encoding MP3: ${file.name}`,
+                        `File ${i + 1}/${totalFiles}`
+                    );
 
-                        processedFiles.push({
-                            name: outputName,
-                            blob: blob,
-                            originalDuration: originalDuration,
-                            newDuration: stretchedBuffer.duration,
-                            sizeMB: sizeMB,
-                            tempo: tempo
-                        });
+                    const blob = await encodeToMP3(stretchedBuffer);
 
-                        setProgress(((i + 1) / totalFiles) * 100, `Complete!`);
+                    processedFiles.push({
+                        name: `${formatDuration(stretchedBuffer.duration)}_${file.name.replace('.mp3', '')}_x${tempo}.mp3`,
+                        originalName: file.name,
+                        blob: blob,
+                        duration: audioBuffer.duration,
+                        sizeMB: (blob.size / 1024 / 1024).toFixed(2),
+                        tempo: tempo
+                    });
 
-                    } catch (error) {
-                        console.error(`Error processing ${file.name}:`, error);
-                        processedFiles.push({
-                            name: file.name,
-                            error: error.message,
-                            blob: null
-                        });
-                    }
+                    updatePlaylistItemStatus(i, 'done');
+
+                } catch (error) {
+                    console.error(`Error processing ${file.name}:`, error);
+                    processedFiles.push({
+                        name: file.name,
+                        error: error.message,
+                        blob: null
+                    });
+                    updatePlaylistItemStatus(i, 'error');
                 }
-
-                setProgress(100, 'All files processed! ✅');
-
-                setTimeout(() => {
-                    displayResults();
-                }, 500);
-
-            } catch (error) {
-                console.error(error);
-                showError('Error: ' + error.message);
-                document.getElementById('progress').classList.remove('show');
-                document.getElementById('processBtn').disabled = false;
-                document.getElementById('file').disabled = false;
             }
+
+            setProgress(100, '✅ All done!', 'Ready to download');
+            displayResults();
+            isProcessing = false;
         });
+
+        function updatePlaylistItemStatus(idx, status) {
+            const item = document.getElementById(`item-${idx}`);
+            if (item) {
+                item.classList.remove('processing', 'done', 'error');
+                if (status === 'processing') item.classList.add('processing');
+                if (status === 'done') item.classList.add('done');
+            }
+        }
+
+        function setProgress(percent, status, details) {
+            document.getElementById('fill').style.width = percent + '%';
+            document.getElementById('percent').textContent = Math.round(percent) + '%';
+            document.getElementById('status').textContent = status;
+            document.getElementById('details').textContent = details;
+        }
 
         function displayResults() {
             const resultsList = document.getElementById('resultsList');
@@ -840,12 +813,9 @@
                         <div class="result-item">
                             <div class="result-item-name">✅ ${file.name}</div>
                             <div class="result-item-info">
-                                ⏱️ ${file.originalDuration.toFixed(1)}s → ${file.newDuration.toFixed(1)}s (${file.tempo}x)<br>
-                                💾 ${file.sizeMB} MB
+                                📊 ${file.duration.toFixed(1)}s • 💾 ${file.sizeMB} MB • ⚡ ${file.tempo}x
                             </div>
-                            <div class="result-item-btn">
-                                <button class="download-individual" onclick="downloadFile(${idx})">⬇️ Download</button>
-                            </div>
+                            <button class="download-btn" onclick="downloadFile(${idx})">⬇️ Download</button>
                         </div>
                     `;
                 }
@@ -853,7 +823,8 @@
 
             resultsList.innerHTML = html;
             document.getElementById('progress').classList.remove('show');
-            document.getElementById('result').classList.add('show');
+            document.getElementById('results').classList.add('show');
+            document.getElementById('processBtn').disabled = false;
         }
 
         window.downloadFile = function(idx) {
@@ -871,7 +842,7 @@
         document.getElementById('downloadZipBtn').addEventListener('click', async () => {
             const zip = new JSZip();
             
-            processedFiles.forEach((file, idx) => {
+            processedFiles.forEach((file) => {
                 if (file.blob) {
                     zip.file(file.name, file.blob);
                 }
@@ -879,7 +850,7 @@
 
             try {
                 document.getElementById('downloadZipBtn').disabled = true;
-                document.getElementById('downloadZipBtn').textContent = '📦 Creating ZIP...';
+                document.getElementById('downloadZipBtn').textContent = '⏳ Creating ZIP...';
                 
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
                 const url = URL.createObjectURL(zipBlob);
@@ -889,12 +860,11 @@
                 a.click();
                 URL.revokeObjectURL(url);
                 
-                document.getElementById('downloadZipBtn').textContent = '📦 Download ZIP';
+                document.getElementById('downloadZipBtn').textContent = '📦 Download All';
                 document.getElementById('downloadZipBtn').disabled = false;
             } catch (error) {
-                console.error('ZIP creation error:', error);
                 showError('Error creating ZIP: ' + error.message);
-                document.getElementById('downloadZipBtn').textContent = '📦 Download ZIP';
+                document.getElementById('downloadZipBtn').textContent = '📦 Download All';
                 document.getElementById('downloadZipBtn').disabled = false;
             }
         });
@@ -905,28 +875,49 @@
             const originalLength = audioBuffer.length;
             const newLength = Math.floor(originalLength / tempo);
 
-            const stretchedBuffer = audioContext.createBuffer(
-                channels,
-                newLength,
-                sampleRate
-            );
+            const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
 
             for (let ch = 0; ch < channels; ch++) {
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
 
-                const fftSize = 4096;
+                const fftSize = 2048;
                 const hopSize = fftSize / 4;
                 const stride = Math.round(hopSize * tempo);
 
+                const hannWindow = new Float32Array(fftSize);
+                for (let i = 0; i < fftSize; i++) {
+                    hannWindow[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
+                }
+
                 let outputIndex = 0;
+                let chunkCount = 0;
+
                 for (let inputIndex = 0; inputIndex < originalLength - fftSize; inputIndex += stride) {
-                    for (let i = 0; i < fftSize && outputIndex + i < newLength; i++) {
-                        const hann = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
-                        const sample = input[inputIndex + i] || 0;
-                        output[outputIndex + i] = (output[outputIndex + i] || 0) + sample * hann;
+                    if (chunkCount % 32 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 0));
                     }
+
+                    for (let i = 0; i < fftSize && outputIndex + i < newLength; i++) {
+                        const sample = input[inputIndex + i] || 0;
+                        const windowed = sample * hannWindow[i];
+                        output[outputIndex + i] = (output[outputIndex + i] || 0) + windowed;
+                    }
+
                     outputIndex += hopSize;
+                    chunkCount++;
+                }
+
+                // Normalize
+                let maxVal = 0;
+                for (let i = 0; i < output.length; i++) {
+                    maxVal = Math.max(maxVal, Math.abs(output[i]));
+                }
+                if (maxVal > 1.0) {
+                    const scale = 0.95 / maxVal;
+                    for (let i = 0; i < output.length; i++) {
+                        output[i] *= scale;
+                    }
                 }
             }
 
@@ -991,18 +982,10 @@
             return int16Array;
         }
 
-        function setProgress(percent, status) {
-            document.getElementById('fill').style.width = percent + '%';
-            document.getElementById('percent').textContent = Math.round(percent) + '%';
-            document.getElementById('status').textContent = status;
-        }
-
         function showError(msg) {
             const err = document.getElementById('error');
-            err.innerHTML = '❌ ' + msg;
+            err.textContent = '❌ ' + msg;
             err.classList.add('show');
-            document.getElementById('processBtn').disabled = false;
-            document.getElementById('file').disabled = false;
         }
     </script>
 </body>

@@ -63,13 +63,14 @@
             border-right: 1px solid #eee;
         }
 
-        /* RIGHT PANEL - PLAYLIST (hidden on mobile) */
+        /* RIGHT PANEL - PLAYLIST */
         .playlist-panel {
             width: 280px;
             background: #f9f9f9;
             overflow-y: auto;
             border-left: 1px solid #eee;
-            display: none;
+            display: flex;
+            flex-direction: column;
         }
 
         /* SECTION */
@@ -205,6 +206,7 @@
             font-size: 14px;
             font-weight: 700;
             color: #333;
+            flex-shrink: 0;
         }
 
         .playlist-count {
@@ -215,6 +217,8 @@
 
         .playlist-items {
             padding: 8px;
+            flex: 1;
+            overflow-y: auto;
         }
 
         .playlist-item {
@@ -229,6 +233,7 @@
             justify-content: space-between;
             align-items: center;
             font-size: 12px;
+            gap: 8px;
         }
 
         .playlist-item:hover {
@@ -251,16 +256,25 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             font-weight: 500;
+            color: #333;
+        }
+
+        .playlist-item-size {
+            font-size: 10px;
+            color: #999;
+            min-width: 50px;
+            text-align: right;
         }
 
         .playlist-item-remove {
             background: none;
             border: none;
-            color: #999;
+            color: #ccc;
             cursor: pointer;
             font-size: 16px;
-            margin-left: 8px;
+            padding: 4px 8px;
             transition: color 0.2s;
+            flex-shrink: 0;
         }
 
         .playlist-item-remove:hover {
@@ -618,6 +632,17 @@
             }
         }
 
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // PREVENT DEFAULT DRAG & DROP ON WHOLE PAGE
+        document.addEventListener('dragover', preventDefaults);
+        document.addEventListener('drop', preventDefaults);
+        window.addEventListener('dragover', preventDefaults);
+        window.addEventListener('drop', preventDefaults);
+
         // FILE INPUT
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -627,11 +652,6 @@
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
             dropZone.addEventListener(event, preventDefaults);
         });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
 
         ['dragenter', 'dragover'].forEach(event => {
             dropZone.addEventListener(event, () => {
@@ -646,36 +666,68 @@
         });
 
         dropZone.addEventListener('drop', (e) => {
+            console.log('Drop event fired');
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('e.dataTransfer.files:', e.dataTransfer.files);
             const files = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.mp3'));
-            addToPlaylist(files);
+            console.log('Filtered MP3 files:', files);
+            if (files.length > 0) {
+                addToPlaylist(files);
+            } else {
+                showError('Please drop MP3 files only');
+            }
         });
 
         fileInput.addEventListener('change', (e) => {
+            console.log('File input changed');
+            console.log('Files:', e.target.files);
             addToPlaylist(Array.from(e.target.files));
         });
 
         function addToPlaylist(files) {
+            console.log('addToPlaylist called with:', files);
             files.forEach(file => {
+                console.log('Adding file:', file.name, file.size);
                 const exists = playlist.some(f => f.name === file.name && f.size === file.size);
                 if (!exists) {
                     playlist.push(file);
+                    console.log('File added, playlist now has', playlist.length, 'files');
                 }
             });
+            console.log('Before updatePlaylistUI, playlist:', playlist);
             updatePlaylistUI();
         }
 
         function updatePlaylistUI() {
+            console.log('updatePlaylistUI called');
             const count = document.getElementById('playlistCount');
             const items = document.getElementById('playlistItems');
             
+            console.log('count element:', count);
+            console.log('items element:', items);
+            
+            if (!count || !items) {
+                console.error('Missing elements!');
+                return;
+            }
+            
             count.textContent = `${playlist.length} file${playlist.length !== 1 ? 's' : ''}`;
 
-            items.innerHTML = playlist.map((file, idx) => `
-                <div class="playlist-item" id="item-${idx}">
-                    <span class="playlist-item-name">${file.name}</span>
-                    <button class="playlist-item-remove" onclick="removeFromPlaylist(${idx})">✕</button>
-                </div>
-            `).join('');
+            const html = playlist.map((file, idx) => {
+                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+                return `
+                    <div class="playlist-item" id="item-${idx}">
+                        <span class="playlist-item-name">${file.name}</span>
+                        <span class="playlist-item-size">${sizeMB}MB</span>
+                        <button class="playlist-item-remove" onclick="removeFromPlaylist(${idx})">✕</button>
+                    </div>
+                `;
+            }).join('');
+            
+            console.log('Generated HTML:', html);
+            items.innerHTML = html;
+            console.log('updatePlaylistUI done');
         }
 
         window.removeFromPlaylist = function(idx) {

@@ -699,8 +699,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Sonic.js for high-quality time-stretching -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sonic/1.0.1/sonic.min.js"></script>
+    <!-- SoundTouchJS - Professional time-stretching used by Audacity -->
+    <script src="https://unpkg.com/soundtouchjs@0.2.1/dist/soundtouch.js"></script>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let selectedFiles = [];
@@ -1081,13 +1081,11 @@
         });
 
         /**
-         * PSOLA-BASED TIME-STRETCHING (Pitch Synchronous Overlap-Add)
+         * TIME-STRETCHING WITH SOUNDTOUCHJS
          * 
-         * PSOLA is much better than phase vocoder for preserving audio quality:
-         * - Detects pitch periods
-         * - Replicates/removes periods to change tempo
-         * - Preserves formants and transients
-         * - Minimal artifacts
+         * SoundTouchJS is a professional-grade library based on SoundTouch (used by Audacity)
+         * Provides the best audio quality for time-stretching without pitch change
+         * Uses time-domain stretching with WSOLA-like processing
          */
         async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
@@ -1097,128 +1095,85 @@
             const newLength = Math.floor(originalLength / tempo);
             const stretchedBuffer = audioContext.createBuffer(channels, newLength, sampleRate);
 
+            // Process each channel
             for (let ch = 0; ch < channels; ch++) {
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
                 
-                await stretchChannelPSOLA(input, output, tempo, sampleRate);
+                await stretchChannelWithSoundTouch(input, output, tempo, sampleRate);
             }
 
             return stretchedBuffer;
         }
 
         /**
-         * PSOLA implementation for high-quality time-stretching
+         * Stretch a single channel using SoundTouchJS
          */
-        async function stretchChannelPSOLA(input, output, tempo, sampleRate) {
-            const windowSize = 2048;
-            const hopSize = 512;
-            const stride = Math.max(1, Math.round(hopSize * tempo));
+        async function stretchChannelWithSoundTouch(input, output, tempo, sampleRate) {
+            // Create SoundTouch instance
+            const soundTouch = new SoundTouch(sampleRate);
+            soundTouch.setTempo(tempo);
             
-            // Hann window for smooth transitions
-            const window = new Float32Array(windowSize);
-            for (let i = 0; i < windowSize; i++) {
-                window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (windowSize - 1)));
-            }
-
-            // Autocorrelation window for pitch detection
-            const autoWindow = new Float32Array(windowSize);
-            for (let i = 0; i < windowSize; i++) {
-                autoWindow[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (windowSize - 1)));
-                autoWindow[i] *= autoWindow[i]; // Square for autocorrelation
-            }
-
+            // Process input in chunks
+            const chunkSize = 4096;
             let inputPos = 0;
             let outputPos = 0;
             let chunkCount = 0;
-            
-            const frame = new Float32Array(windowSize);
-            const outFrame = new Float32Array(windowSize);
 
-            while (inputPos + windowSize <= input.length && outputPos < output.length) {
-                // Yield to prevent UI blocking
-                if (chunkCount % 16 === 0) {
+            // Input buffer for SoundTouch
+            const samples = new Float32Array(chunkSize);
+
+            while (inputPos < input.length) {
+                // Yield every 8 chunks to keep UI responsive
+                if (chunkCount % 8 === 0) {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
 
-                // Extract frame
-                for (let i = 0; i < windowSize; i++) {
-                    frame[i] = (input[inputPos + i] || 0) * window[i];
-                }
-
-                // Simple pitch detection (autocorrelation)
-                const pitchPeriod = detectPitchPeriod(frame, autoWindow, sampleRate);
+                // Fill samples buffer
+                const remaining = input.length - inputPos;
+                const toProcess = Math.min(chunkSize, remaining);
                 
-                // PSOLA processing: stretch by replicating/removing periods
-                processPSOLA(frame, outFrame, pitchPeriod, tempo, window);
-
-                // Overlap-add to output
-                for (let i = 0; i < windowSize && outputPos + i < output.length; i++) {
-                    output[outputPos + i] = (output[outputPos + i] || 0) + outFrame[i];
+                for (let i = 0; i < toProcess; i++) {
+                    samples[i] = input[inputPos + i];
+                }
+                // Fill rest with zeros if needed
+                for (let i = toProcess; i < chunkSize; i++) {
+                    samples[i] = 0;
                 }
 
-                inputPos += stride;
-                outputPos += hopSize;
+                // Process chunk
+                soundTouch.inputBuffer.putSamples(samples, toProcess);
+
+                // Read output
+                while (true) {
+                    const n = soundTouch.outputBuffer.receiveSamples(samples, chunkSize);
+                    if (n === 0) break;
+                    
+                    for (let i = 0; i < n && outputPos < output.length; i++) {
+                        output[outputPos++] = samples[i];
+                    }
+                }
+
+                inputPos += toProcess;
                 chunkCount++;
+            }
+
+            // Flush remaining
+            soundTouch.inputBuffer.putSamples(new Float32Array(0), 0);
+            soundTouch.flush();
+            
+            const samples2 = new Float32Array(4096);
+            while (true) {
+                const n = soundTouch.outputBuffer.receiveSamples(samples2, 4096);
+                if (n === 0) break;
+                
+                for (let i = 0; i < n && outputPos < output.length; i++) {
+                    output[outputPos++] = samples2[i];
+                }
             }
 
             // Normalize
             normalizeWithDynamicRange(output);
-        }
-
-        /**
-         * Detect pitch period using autocorrelation
-         */
-        function detectPitchPeriod(signal, window, sampleRate) {
-            const minPeriod = Math.floor(sampleRate / 400);  // 400 Hz max
-            const maxPeriod = Math.floor(sampleRate / 60);   // 60 Hz min
-            
-            let maxCorr = 0;
-            let bestPeriod = 256;
-
-            // Simplified autocorrelation
-            for (let lag = minPeriod; lag < maxPeriod; lag += 4) {
-                let corr = 0;
-                for (let i = 0; i < signal.length - lag; i++) {
-                    corr += signal[i] * signal[i + lag] * window[i];
-                }
-                
-                if (corr > maxCorr) {
-                    maxCorr = corr;
-                    bestPeriod = lag;
-                }
-            }
-
-            return Math.max(64, Math.min(512, bestPeriod));
-        }
-
-        /**
-         * PSOLA: modify frame by pitch period replication/removal
-         */
-        function processPSOLA(inFrame, outFrame, pitchPeriod, tempo, window) {
-            outFrame.fill(0);
-            
-            // Copy periods with overlap-add based on tempo
-            let inPos = 0;
-            let outPos = 0;
-            const periodLength = Math.round(pitchPeriod);
-            
-            while (inPos + periodLength <= inFrame.length && outPos + periodLength <= outFrame.length) {
-                // Extract period
-                for (let i = 0; i < periodLength; i++) {
-                    if (inPos + i < inFrame.length) {
-                        const period = inFrame[inPos + i];
-                        
-                        // Apply windowing for smooth transitions
-                        const w = 0.5 * (1 - Math.cos(2 * Math.PI * i / periodLength));
-                        outFrame[outPos + i] += period * w;
-                    }
-                }
-                
-                // Move by appropriate amounts based on tempo
-                inPos += periodLength;
-                outPos += Math.round(periodLength / tempo);
-            }
         }
 
         // Normalize audio while preserving dynamic range

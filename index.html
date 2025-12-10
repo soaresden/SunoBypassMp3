@@ -951,7 +951,7 @@
                         }
 
                         setProgress((i + 0.3) / totalFiles * 100, `Time-stretching ${file.name}...`);
-                        const stretchedBuffer = await stretchWithImprovedPhaseVocoder(audioBuffer, actualTempo);
+                        const stretchedBuffer = await stretchWithPhaseVocoder(audioBuffer, actualTempo);
 
                         setProgress((i + 0.7) / totalFiles * 100, `Encoding MP3 320kbps...`);
                         const blob = await encodeToMP3(stretchedBuffer);

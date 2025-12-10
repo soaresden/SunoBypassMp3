@@ -1082,11 +1082,12 @@
         });
 
         /**
-         * TIME-STRETCHING WITH SOUNDTOUCHJS
+         * TIME-STRETCHING WITH PITCH PRESERVATION
          * 
-         * Professional audio time-stretching from SoundTouch library
-         * Used by Audacity, VLC, and many other professional audio tools
-         * Quality: Excellent - no artifacts, preserves audio fidelity
+         * Uses SoundTouchJS to:
+         * 1. Change tempo (duration)
+         * 2. Shift pitch inversely to keep original pitch
+         * Result: Song duration changes but pitch stays the same
          */
         async function stretchWithImprovedPhaseVocoder(audioBuffer, tempo) {
             const channels = audioBuffer.numberOfChannels;
@@ -1101,28 +1102,29 @@
                 const input = audioBuffer.getChannelData(ch);
                 const output = stretchedBuffer.getChannelData(ch);
                 
-                await stretchChannelWithSoundTouch(input, output, tempo, sampleRate);
+                await stretchChannelWithPitchPreservation(input, output, tempo, sampleRate);
             }
 
             return stretchedBuffer;
         }
 
         /**
-         * Stretch a single channel using SoundTouchJS library
+         * Stretch with pitch preservation
+         * Changes tempo but keeps original pitch
          */
-        async function stretchChannelWithSoundTouch(input, output, tempo, sampleRate) {
+        async function stretchChannelWithPitchPreservation(input, output, tempo, sampleRate) {
             try {
                 // Create SoundTouch filter
                 const soundTouch = new SoundTouch(sampleRate);
+                
+                // Set tempo (change speed)
                 soundTouch.setTempo(tempo);
                 
-                // Create a simple filter to wrap the data
-                const filter = new SimpleFilter(input, output);
-                filter.read = function(numFrames) {
-                    return this.sourceBuffer.extract(this.res, numFrames);
-                };
-
-                // Process the audio
+                // Set pitch shift to compensate (inverse of tempo change)
+                // If we slow down by 2x, we pitch up by 2x to keep original pitch
+                const pitchShift = 1 / tempo;
+                soundTouch.setPitch(pitchShift);
+                
                 const chunkSize = 4096;
                 let inputIndex = 0;
                 let outputIndex = 0;
@@ -1168,7 +1170,7 @@
 
             } catch (error) {
                 // Fallback to simple resampling if SoundTouch fails
-                console.warn('SoundTouch processing failed, using fallback resampling:', error);
+                console.warn('SoundTouch processing failed, using fallback:', error);
                 await resampleChannelFallback(input, output, tempo);
             }
         }
